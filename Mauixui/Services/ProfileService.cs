@@ -195,5 +195,15 @@ namespace Mauixui.Services
                 UpdateProfile(profile);
             }
         }
+
+        public FinanceDatabase GetFinanceDatabase(string profileId)
+        {
+            string dbPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                $"finance_{profileId}.db3");
+
+            return new FinanceDatabase(dbPath);
+        }
+
     }
 }

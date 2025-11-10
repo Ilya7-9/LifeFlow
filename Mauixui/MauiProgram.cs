@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microcharts.Maui;
 
 namespace Mauixui
 {
@@ -18,6 +19,7 @@ namespace Mauixui
 #if DEBUG
     		builder.Logging.AddDebug();
 #endif
+            builder.UseMicrocharts();
 
             return builder.Build();
         }
