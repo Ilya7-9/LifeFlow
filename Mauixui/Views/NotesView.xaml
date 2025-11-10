@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mauixui.Views.NotesView">
+
+    <Grid ColumnDefinitions="300,*" ColumnSpacing="15" Padding="15">
+
+        <!-- Левая панель - редактор -->
+        <ScrollView Grid.Column="0">
+            <VerticalStackLayout Spacing="15">
+
+                <!-- Заголовок -->
+                <Label Text="Новая заметка" 
+                       FontSize="20" 
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextDark}"
+                       HorizontalOptions="Center"/>
+
+                <!-- Поле заголовка -->
+                <Frame BackgroundColor="{StaticResource TertiaryDark}"
+                       CornerRadius="10"
+                       Padding="15"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Заголовок" 
+                               FontSize="12" 
+                               TextColor="{StaticResource TextSecondaryDark}"/>
+                        <Entry x:Name="TitleEntry"
+                               Placeholder="Введите заголовок..."
+                               TextColor="{StaticResource TextDark}"
+                               BackgroundColor="Transparent"
+                               FontSize="16"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Редактор -->
+                <Frame BackgroundColor="{StaticResource TertiaryDark}"
+                       CornerRadius="10"
+                       Padding="15"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Содержание" 
+                               FontSize="12" 
+                               TextColor="{StaticResource TextSecondaryDark}"/>
+                        <Editor x:Name="ContentEditor"
+                                Placeholder="Начните писать..."
+                                TextColor="{StaticResource TextDark}"
+                                BackgroundColor="Transparent"
+                                MinimumHeightRequest="150"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Упрощенная панель инструментов -->
+                <Frame BackgroundColor="{StaticResource TertiaryDark}"
+                       CornerRadius="10"
+                       Padding="15"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Действия" 
+                               FontSize="12" 
+                               TextColor="{StaticResource TextSecondaryDark}"/>
+
+                        <HorizontalStackLayout Spacing="8">
+                            <Button Text="📌 Закрепить" 
+                                    Clicked="TogglePin"
+                                    BackgroundColor="{StaticResource SecondaryDark}"
+                                    TextColor="{StaticResource TextDark}"
+                                    CornerRadius="8"
+                                    FontSize="12"/>
+                            <Button Text="🏷️ Теги" 
+                                    Clicked="AddTag"
+                                    BackgroundColor="{StaticResource SecondaryDark}"
+                                    TextColor="{StaticResource TextDark}"
+                                    CornerRadius="8"
+                                    FontSize="12"/>
+                            <Button Text="🎨 Цвет" 
+                                    Clicked="ShowColorPicker"
+                                    BackgroundColor="{StaticResource SecondaryDark}"
+                                    TextColor="{StaticResource TextDark}"
+                                    CornerRadius="8"
+                                    FontSize="12"/>
+                        </HorizontalStackLayout>
+
+                        <!-- Теги -->
+                        <FlexLayout x:Name="TagsContainer" 
+                                    Wrap="Wrap" 
+                                    AlignItems="Start"
+                                    BindableLayout.ItemsSource="{Binding CurrentTags}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate>
+                                    <Frame BackgroundColor="{StaticResource AccentDark}"
+                                           CornerRadius="12"
+                                           Padding="8,4"
+                                           Margin="2">
+                                        <Label Text="{Binding .}" 
+                                               FontSize="10" 
+                                               TextColor="{StaticResource White}"/>
+                                    </Frame>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </FlexLayout>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Кнопки действий -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button  x:Name="SaveButton"
+                            Grid.Column="0"
+                            Text="💾 Сохранить"
+                            Clicked="SaveNote"
+                            BackgroundColor="{StaticResource AccentDark}"
+                            TextColor="{StaticResource White}"
+                            CornerRadius="10"
+                            HeightRequest="45"/>
+                    <Button Grid.Column="1"
+                            Text="🔄 Новый"
+                            Clicked="NewNote"
+                            BackgroundColor="{StaticResource TertiaryDark}"
+                            TextColor="{StaticResource TextDark}"
+                            CornerRadius="10"
+                            HeightRequest="45"/>
+                </Grid>
+
+                <!-- Уникальные функции для заметок -->
+                <Frame BackgroundColor="{StaticResource TertiaryDark}"
+                       CornerRadius="10"
+                       Padding="15"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Уникальные функции" 
+                               FontSize="12" 
+                               TextColor="{StaticResource TextSecondaryDark}"/>
+
+                        <Button Text="📤 Экспорт заметок" 
+                                Clicked="ExportNotes"
+                                BackgroundColor="{StaticResource SecondaryDark}"
+                                TextColor="{StaticResource TextDark}"
+                                CornerRadius="8"
+                                HeightRequest="35"/>
+                        <Button Text="🚀 Быстрая заметка" 
+                                Clicked="CreateQuickNote"
+                                BackgroundColor="{StaticResource SecondaryDark}"
+                                TextColor="{StaticResource TextDark}"
+                                CornerRadius="8"
+                                HeightRequest="35"/>
+                        <Button Text="🔍 Поиск по тегам" 
+                                Clicked="SearchByTag"
+                                BackgroundColor="{StaticResource SecondaryDark}"
+                                TextColor="{StaticResource TextDark}"
+                                CornerRadius="8"
+                                HeightRequest="35"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Правая панель - список заметок -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,*">
+
+            <!-- Панель поиска и фильтров -->
+            <Frame Grid.Row="0"
+                   BackgroundColor="{StaticResource TertiaryDark}"
+                   CornerRadius="10"
+                   Padding="15"
+                   HasShadow="False"
+                   Margin="0,0,0,15">
+                <VerticalStackLayout Spacing="10">
+                    <SearchBar x:Name="SearchBar"
+                               Placeholder="Поиск заметок..."
+                               TextChanged="OnSearchChanged"
+                               BackgroundColor="Transparent"
+                               TextColor="{StaticResource TextDark}"
+                               PlaceholderColor="{StaticResource TextSecondaryDark}"/>
+
+                    <!-- Фильтры и управление -->
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <ScrollView Orientation="Horizontal" Grid.Column="0">
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="Все" 
+                                        Clicked="FilterAll"
+                                        BackgroundColor="{StaticResource AccentDark}"
+                                        TextColor="{StaticResource White}"
+                                        CornerRadius="15"
+                                        HeightRequest="30"/>
+                                <Button Text="📌 Закрепленные" 
+                                        Clicked="FilterPinned"
+                                        BackgroundColor="{StaticResource SecondaryDark}"
+                                        TextColor="{StaticResource TextDark}"
+                                        CornerRadius="15"
+                                        HeightRequest="30"/>
+                                <Button Text="🔄 Недавние" 
+                                        Clicked="FilterRecent"
+                                        BackgroundColor="{StaticResource SecondaryDark}"
+                                        TextColor="{StaticResource TextDark}"
+                                        CornerRadius="15"
+                                        HeightRequest="30"/>
+                                <Button Text="🔤 По алфавиту" 
+                                        Clicked="SortAlphabetically"
+                                        BackgroundColor="{StaticResource SecondaryDark}"
+                                        TextColor="{StaticResource TextDark}"
+                                        CornerRadius="15"
+                                        HeightRequest="30"/>
+                                <Button Text="✅ Задачи" 
+                                        Clicked="FilterTasks"
+                                        BackgroundColor="{StaticResource SuccessGreen}"
+                                        TextColor="{StaticResource White}"
+                                        CornerRadius="15"
+                                        HeightRequest="30"/>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+
+                        <!-- Кнопка удаления выбранной заметки -->
+                        <Button x:Name="DeleteButton"
+                                Grid.Column="1"
+                                Text="🗑️ Удалить"
+                                Clicked="DeleteSelectedNote"
+                                BackgroundColor="{StaticResource ErrorRed}"
+                                TextColor="{StaticResource White}"
+                                CornerRadius="15"
+                                HeightRequest="30"
+                                IsVisible="False"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Список заметок -->
+            <RefreshView Grid.Row="1"
+                         x:Name="NotesRefreshView"
+                         RefreshColor="{StaticResource AccentDark}"
+                         Command="{Binding RefreshNotesCommand}">
+                <ScrollView>
+                    <VerticalStackLayout x:Name="NotesContainer" Spacing="15" Padding="0,0,5,0"/>
+                </ScrollView>
+            </RefreshView>
+
+        </Grid>
+
+    </Grid>
+
+</ContentView>

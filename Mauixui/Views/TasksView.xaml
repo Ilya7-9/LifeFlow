@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Mauixui.Views.TasksView"
+    BackgroundColor="#0F0F0F">
+
+    <Grid BackgroundColor="{StaticResource PrimaryDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <HorizontalStackLayout Grid.Row="0" Padding="16" Spacing="12" VerticalOptions="Start">
+            <Label Text="Задачи" FontSize="22" FontAttributes="Bold" VerticalOptions="Center" />
+
+            <HorizontalStackLayout HorizontalOptions="EndAndExpand" Spacing="8">
+                <Button x:Name="BtnQuickActions" Text="≡" WidthRequest="44" HeightRequest="44" CornerRadius="10" />
+                <Button x:Name="BtnAddTask" Text="➕" WidthRequest="44" HeightRequest="44" CornerRadius="10" Clicked="BtnAddTask_Clicked"/>
+            </HorizontalStackLayout>
+        </HorizontalStackLayout>
+
+        <!-- SEARCH -->
+        <Frame Grid.Row="1" CornerRadius="10" Margin="12,10,12,10" BackgroundColor="#222222" Padding="8" HasShadow="False">
+            <Entry x:Name="SearchEntry" Placeholder="Поиск задач..." TextChanged="SearchEntry_TextChanged" />
+        </Frame>
+
+        <!-- TASKS LIST -->
+        <ScrollView Grid.Row="2" Margin="12,0,12,12">
+            <VerticalStackLayout x:Name="TasksList" Spacing="12" Padding="4" />
+        </ScrollView>
+
+        <!-- MODAL -->
+        <Grid x:Name="ModalOverlay"
+              IsVisible="False"
+              Padding="20"
+              HorizontalOptions="Fill"
+              VerticalOptions="Fill"
+              BackgroundColor="{StaticResource PrimaryDark}">
+            <Frame CornerRadius="12"
+                   Padding="16"
+                   VerticalOptions="Center"
+                   HorizontalOptions="Center"
+                   WidthRequest="420"
+                   BackgroundColor="#1E1E1E"
+                   HasShadow="True">
+                <VerticalStackLayout Spacing="10">
+
+                    <Label x:Name="ModalTitle" Text="Создать задачу" FontAttributes="Bold" FontSize="18" />
+
+                    <Entry x:Name="ModalTitleEntry" Placeholder="Название задачи" />
+                    <Editor x:Name="ModalDescriptionEditor" HeightRequest="100" Placeholder="Описание (опционально)"/>
+
+                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                        <Label Text="Категория:" VerticalOptions="Center" TextColor="#CCCCCC" />
+                        <Picker x:Name="ModalCategoryPicker" Title="Выберите категорию" WidthRequest="220" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Entry x:Name="ModalNewCategoryEntry" Placeholder="Новая категория (опционально)" />
+                        <Button x:Name="ModalAddCategoryBtn" Text="Добавить" Clicked="ModalAddCategoryBtn_Clicked" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                        <Label Text="Приоритет:" VerticalOptions="Center" TextColor="#CCCCCC"/>
+                        <Picker x:Name="ModalPriorityPicker" Title="Выберите приоритет" WidthRequest="220"/>
+                    </HorizontalStackLayout>
+
+                    <Label Text="Подзадачи:" FontAttributes="Bold" />
+                    <VerticalStackLayout x:Name="ModalSubtasksLayout" Spacing="6" HeightRequest="120" />
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Entry x:Name="ModalSubtaskEntry" Placeholder="Название подзадачи..." />
+                        <Button x:Name="ModalAddSubtaskBtn" Text="Добавить" Clicked="ModalAddSubtaskBtn_Clicked" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                        <Label Text="Дедлайн:" VerticalOptions="Center" TextColor="#CCCCCC"/>
+                        <DatePicker x:Name="ModalDeadlinePicker" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Spacing="10" HorizontalOptions="End">
+                        <Button x:Name="ModalCancelBtn" Text="Отмена" Clicked="ModalCancel_Clicked" />
+                        <Button x:Name="ModalSaveBtn" Text="Сохранить" Clicked="ModalSaveBtn_Clicked" />
+                    </HorizontalStackLayout>
+
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>
+    </Grid>
+</ContentView>

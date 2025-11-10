@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:Mauixui.Views"
+             x:Class="Mauixui.MainPage"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="230"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Левая панель -->
+        <Grid Grid.Column="0"
+              BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource SecondaryDark}}"
+              RowDefinitions="Auto,*,Auto"
+              VerticalOptions="FillAndExpand"
+              Padding="20,30">
+
+            <!-- Верхняя часть (навигация) -->
+            <VerticalStackLayout Spacing="15" VerticalOptions="CenterAndExpand">
+                <Button x:Name="HomeButton"
+                        Text="🏠"
+                        BorderWidth="0"
+                        Clicked="OnHomeClicked"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ActiveItemLight}, Dark={StaticResource ActiveItemDark}}"
+                        FontSize="62"
+                        HeightRequest="100"
+                        CornerRadius="10"
+                        TextColor="{StaticResource White}"/>
+
+                <Button x:Name="TasksButton"
+                        Text="📋"
+                        BorderWidth="0"
+                        Clicked="OnTasksClicked"
+                        BackgroundColor="{StaticResource Transparent}"
+                        FontSize="62"
+                        HeightRequest="100"
+                        CornerRadius="10"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
+
+                <Button x:Name="NotesButton"
+                        Text="📝"
+                        BorderWidth="0"
+                        Clicked="OnNotesClicked"
+                        BackgroundColor="{StaticResource Transparent}"
+                        FontSize="62"
+                        HeightRequest="100"
+                        CornerRadius="10"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
+                
+                <Button x:Name="FinanceButton"
+                        Text="💸"
+                        BorderWidth="0"
+                        Clicked="OnFinanceClicked"
+                        BackgroundColor="{StaticResource Transparent}"
+                        FontSize="62"
+                        HeightRequest="100"
+                        CornerRadius="10"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
+
+                <Button x:Name="TrackButton"
+                        Text="📈"
+                        BorderWidth="0"
+                        Clicked="OnTrackClicked"
+                        BackgroundColor="{StaticResource Transparent}"
+                        FontSize="62"
+                        HeightRequest="100"
+                        CornerRadius="10"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
+            </VerticalStackLayout>
+
+            <!-- Нижняя часть (профиль и настройки) -->
+            <VerticalStackLayout Grid.Row="2"
+                     Spacing="15"
+                     Margin="0,30,0,0"
+                     Padding="0"
+                     VerticalOptions="End">
+
+                <BoxView HeightRequest="1"
+             BackgroundColor="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}" />
+
+                <!-- Текущий профиль -->
+                <Frame x:Name="CurrentProfileFrame"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource TertiaryLight}, Dark={StaticResource TertiaryDark}}"
+                       CornerRadius="10"
+                       Padding="12"
+                       HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                        <Label x:Name="ProfileAvatarLabel"
+                               Text="👤"
+                               FontSize="20"
+                               VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"/>
+
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                            <Label x:Name="ProfileNameLabel"
+                                   Text="Профиль"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"/>
+                            <Label x:Name="ProfileStatsLabel"
+                                   Text="Задачи: 0 | Заметки: 0"
+                                   FontSize="10"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
+                        </VerticalStackLayout>
+
+                        <Button x:Name="ProfileMenuButton"
+                                Grid.Column="2"
+                                Text="⋮"
+                                BackgroundColor="Transparent"
+                                TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}"
+                                FontSize="16"
+                                WidthRequest="30"
+                                HeightRequest="30"
+                                CornerRadius="15"
+                                Clicked="OnProfileMenuClicked"/>
+                    </Grid>
+                </Frame>
+
+                <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                    <Label Text="Тёмная тема"
+               VerticalOptions="Center"
+               TextColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                    <Switch x:Name="ThemeSwitch"
+                Toggled="OnThemeSwitchToggled"
+                OnColor="{StaticResource AccentLight}"
+                ThumbColor="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </Grid>
+
+        <!-- Основное содержимое справа -->
+        <Grid x:Name="MainContent"
+              Grid.Column="1"
+              Padding="25"
+              BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+    </Grid>
+</ContentPage>

@@ -1,0 +1,120 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mauixui.Views.HomeView">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- Статистика профиля -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#F0F0F0, Dark=#2D2D30}" 
+                   CornerRadius="15" Padding="20">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                    <Label x:Name="ProfileAvatarLabel" 
+                           Text="👤" 
+                           FontSize="40"
+                           VerticalOptions="Center"/>
+
+                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                        <Label x:Name="ProfileNameLabel" 
+                               Text="Профиль" 
+                               FontSize="18" 
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+                        <Label Text="Общая статистика" 
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+                    </VerticalStackLayout>
+
+                    <!-- ИСПРАВЛЕННАЯ КНОПКА - удален неправильный префикс 'd:' -->
+                    <Button Grid.Column="2"
+                            Text="📊" 
+                            BackgroundColor="Transparent"
+                            FontSize="20"
+                            Clicked="OnShowDetailedStats"/>
+                </Grid>
+            </Frame>
+
+            <!-- Карточки статистики -->
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                <!-- Задачи -->
+                <Frame BackgroundColor="#4CAF50" CornerRadius="10" Padding="15">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Label Text="✅" FontSize="20" HorizontalOptions="Center"/>
+                        <Label x:Name="TasksCountLabel" Text="0" FontSize="24" FontAttributes="Bold" 
+                               HorizontalOptions="Center" TextColor="White"/>
+                        <Label Text="Задачи" FontSize="12" HorizontalOptions="Center" TextColor="White"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Заметки -->
+                <Frame BackgroundColor="#2196F3" CornerRadius="10" Padding="15" Grid.Column="1">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Label Text="📝" FontSize="20" HorizontalOptions="Center"/>
+                        <Label x:Name="NotesCountLabel" Text="0" FontSize="24" FontAttributes="Bold" 
+                               HorizontalOptions="Center" TextColor="White"/>
+                        <Label Text="Заметки" FontSize="12" HorizontalOptions="Center" TextColor="White"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Время -->
+                <Frame BackgroundColor="#FF9800" CornerRadius="10" Padding="15" Grid.Column="2">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Label Text="⏱️" FontSize="20" HorizontalOptions="Center"/>
+                        <Label x:Name="TrackedTimeLabel" Text="0с" FontSize="16" FontAttributes="Bold" 
+                               HorizontalOptions="Center" TextColor="White"/>
+                        <Label Text="Отслежено" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                    </VerticalStackLayout>
+                </Frame>
+            </Grid>
+
+            <!-- Продуктивность -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#E8F5E8, Dark=#1B5E20}" 
+                   CornerRadius="10" Padding="15">
+                <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
+                    <Label Text="📈" FontSize="24"/>
+                    <VerticalStackLayout>
+                        <Label Text="Продуктивность" FontSize="14" 
+                               TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+                        <Label x:Name="ProductivityLabel" Text="0%" FontSize="18" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+                    </VerticalStackLayout>
+                </HorizontalStackLayout>
+            </Frame>
+
+            <!-- Быстрый доступ -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#0D47A1}" 
+                   CornerRadius="10" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🚀 Быстрый доступ" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <Button Text="📝 Заметки" 
+                                BackgroundColor="{AppThemeBinding Light=#2196F3, Dark=#1976D2}"
+                                TextColor="White"
+                                CornerRadius="8"
+                                HeightRequest="40"/>
+
+                        <Button Text="✅ Задачи" 
+                                BackgroundColor="{AppThemeBinding Light=#4CAF50, Dark=#388E3C}"
+                                TextColor="White"
+                                CornerRadius="8"
+                                HeightRequest="40"
+                                Grid.Column="1"/>
+
+                        <Button Text="📊 Трекер" 
+                                BackgroundColor="{AppThemeBinding Light=#FF9800, Dark=#F57C00}"
+                                TextColor="White"
+                                CornerRadius="8"
+                                HeightRequest="40"
+                                Grid.Column="2"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>

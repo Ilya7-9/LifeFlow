@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    x:Class="Mauixui.Colors">
+
+    <!-- Discord/ChatGPT Inspired Color Palette -->
+    <Color x:Key="PrimaryDark">#1A1B1E</Color>
+    <Color x:Key="SecondaryDark">#2F3136</Color>
+    <Color x:Key="TertiaryDark">#40444B</Color>
+    <Color x:Key="AccentDark">#5865F2</Color>
+    <Color x:Key="TextDark">#FFFFFF</Color>
+    <Color x:Key="TextSecondaryDark">#B9BBBE</Color>
+    <Color x:Key="BorderDark">#36393F</Color>
+
+    <Color x:Key="PrimaryLight">#FFFFFF</Color>
+    <Color x:Key="SecondaryLight">#F2F3F5</Color>
+    <Color x:Key="TertiaryLight">#E3E5E8</Color>
+    <Color x:Key="AccentLight">#5865F2</Color>
+    <Color x:Key="TextLight">#2E3338</Color>
+    <Color x:Key="TextSecondaryLight">#747F8D</Color>
+    <Color x:Key="BorderLight">#E3E5E8</Color>
+
+    <!-- Active States -->
+    <Color x:Key="ActiveItemDark">#5865F2</Color>
+    <Color x:Key="ActiveItemLight">#5865F2</Color>
+    <Color x:Key="HoverDark">#3BA55D</Color>
+    <Color x:Key="HoverLight">#3BA55D</Color>
+
+    <!-- Additional Colors for Tasks -->
+    <Color x:Key="OrangeRed">#FF4500</Color>
+    <Color x:Key="Gold">#FFD700</Color>
+    <Color x:Key="ErrorRed">#FF4B4B</Color>
+    <Color x:Key="Gray">#888888</Color>
+    <Color x:Key="Transparent">#00FFFFFF</Color>
+    <Color x:Key="White">#FFFFFF</Color>
+    <Color x:Key="SuccessGreen">#3BA55D</Color>
+
+    <!-- Цвета для заметок -->
+    <Color x:Key="NoteBlue">#4A6FFF</Color>
+    <Color x:Key="NoteGreen">#23D160</Color>
+    <Color x:Key="NotePurple">#8B5CF6</Color>
+    <Color x:Key="NotePink">#EC4899</Color>
+    <Color x:Key="NoteYellow">#F59E0B</Color>
+    <Color x:Key="NoteGray">#6B7280</Color>
+
+
+</ResourceDictionary>
