@@ -79,11 +79,11 @@ namespace Mauixui
             LoadView(new HomeView());
         }
 
-        private void OnTasksClicked(object sender, EventArgs e)
-        {
-            SetActiveButton(TasksButton);
-            LoadView(new TasksView());
-        }
+        //private void OnTasksClicked(object sender, EventArgs e)
+        //{
+        //    SetActiveButton(TasksButton);
+        //    LoadView(new TasksView());
+        //}
 
         private void OnFinanceClicked(object sender, EventArgs e)
         {
@@ -97,11 +97,11 @@ namespace Mauixui
             LoadView(new TrackerView());
         }
 
-        private void OnNotesClicked(object sender, EventArgs e)
-        {
-            SetActiveButton(NotesButton);
-            LoadView(new NotesView());
-        }
+        //private void OnNotesClicked(object sender, EventArgs e)
+        //{
+        //    SetActiveButton(NotesButton);
+        //    LoadView(new NotesView());
+        //}
 
 
         private async void OnProfileMenuClicked(object sender, EventArgs e)
@@ -144,14 +144,14 @@ namespace Mauixui
 
                     if (_currentActiveButton == HomeButton)
                         LoadView(new HomeView());
-                    else if (_currentActiveButton == TasksButton)
-                        LoadView(new TasksView());
+                    //else if (_currentActiveButton == TasksButton)
+                    //    LoadView(new TasksView());
                     else if (_currentActiveButton == FinanceButton)
                         LoadView(new FinanceView());
                     else if (_currentActiveButton == TrackButton)
                         LoadView(new TrackerView());
-                    else if (_currentActiveButton == NotesButton)
-                        LoadView(new TrackerView());
+                    //else if (_currentActiveButton == NotesButton)
+                    //    LoadView(new TrackerView());
 
                     await DisplayAlert("Успех", $"Профиль {selectedProfile.Name} активирован", "OK");
                 }

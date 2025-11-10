@@ -30,26 +30,6 @@
                         CornerRadius="10"
                         TextColor="{StaticResource White}"/>
 
-                <Button x:Name="TasksButton"
-                        Text="📋"
-                        BorderWidth="0"
-                        Clicked="OnTasksClicked"
-                        BackgroundColor="{StaticResource Transparent}"
-                        FontSize="62"
-                        HeightRequest="100"
-                        CornerRadius="10"
-                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
-
-                <Button x:Name="NotesButton"
-                        Text="📝"
-                        BorderWidth="0"
-                        Clicked="OnNotesClicked"
-                        BackgroundColor="{StaticResource Transparent}"
-                        FontSize="62"
-                        HeightRequest="100"
-                        CornerRadius="10"
-                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
-                
                 <Button x:Name="FinanceButton"
                         Text="💸"
                         BorderWidth="0"
@@ -61,7 +41,7 @@
                         TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
 
                 <Button x:Name="TrackButton"
-                        Text="📈"
+                        Text="⏱"
                         BorderWidth="0"
                         Clicked="OnTrackClicked"
                         BackgroundColor="{StaticResource Transparent}"
