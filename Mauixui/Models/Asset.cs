@@ -1,4 +1,4 @@
-﻿using SQLite;
+using SQLite;
 
 namespace Mauixui.Models
 {
@@ -9,9 +9,9 @@ namespace Mauixui.Models
         public int Id { get; set; }
 
         public string ProfileId { get; set; }
+
         public string Name { get; set; }
         public string Type { get; set; } // "Актив" или "Обязательство"
         public decimal Value { get; set; }
-        public string Description { get; set; }
     }
 }

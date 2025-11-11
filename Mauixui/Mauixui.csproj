@@ -66,6 +66,22 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Converter\NoteColorConverter.cs" />
+	  <Compile Remove="Models\NoteItem.cs" />
+	  <Compile Remove="Models\Subtask.cs" />
+	  <Compile Remove="Models\TaskItem.cs" />
+	  <Compile Remove="Services\NoteDatabase.cs" />
+	  <Compile Remove="Services\TaskDatabase.cs" />
+	  <Compile Remove="Views\NotesView.xaml.cs" />
+	  <Compile Remove="Views\TasksView.xaml.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiXaml Remove="Views\NotesView.xaml" />
+	  <MauiXaml Remove="Views\TasksView.xaml" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microcharts.Maui" Version="1.0.1" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
@@ -77,12 +93,6 @@
 	  <Compile Update="Views\HomeView.xaml.cs">
 	    <DependentUpon>HomeView.xaml</DependentUpon>
 	  </Compile>
-	  <Compile Update="Views\NotesView.xaml.cs">
-	    <DependentUpon>NotesView.xaml</DependentUpon>
-	  </Compile>
-	  <Compile Update="Views\TasksView.xaml.cs">
-	    <DependentUpon>TasksView.xaml</DependentUpon>
-	  </Compile>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -92,13 +102,19 @@
 	  <MauiXaml Update="MainPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
+	  <MauiXaml Update="Views\AssetsVeiw.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\BudgetsView.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\CategoriesView.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Views\FinanceView.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Views\NotesView.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\TasksView.xaml">
+	  <MauiXaml Update="Views\StatisticsView.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="Views\TrackerView.xaml">

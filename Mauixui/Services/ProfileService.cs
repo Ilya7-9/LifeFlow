@@ -39,23 +39,10 @@ namespace Mauixui.Services
         {
             try
             {
-                // Получаем базы данных для этого профиля
-                var noteDb = GetNoteDatabase(profile.Id);
-                var taskDb = GetTaskDatabase(profile.Id);
-
-                // Получаем статистику заметок
-                var notesCount = await noteDb.GetNotesCountAsync(profile.Id);
-
-                // Получаем статистику задач
-                var tasks = await taskDb.GetTasksAsync();
-                var tasksCount = tasks.Count(t => t.IsCompleted && t.ProfileId == profile.Id);
-
                 // Временное решение для времени
                 var trackedTime = TimeSpan.Zero;
 
-                // Обновляем профиль
-                profile.TotalNotes = notesCount;
-                profile.TotalTasks = tasksCount;
+                // Обновляем ghjabkm 
                 profile.TotalTrackedTime = trackedTime;
             }
             catch (Exception ex)
@@ -172,16 +159,28 @@ namespace Mauixui.Services
             }
         }
 
-        public NoteDatabase GetNoteDatabase(string profileId)
+        public FinanceDatabase GetFinanceDatabase(string profileId)
         {
-            var dbPath = Path.Combine("D:/Шарага/С#/db", $"notes_{profileId}.db3");
-            return new NoteDatabase(dbPath);
+            var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_finance.db3");
+            return new FinanceDatabase(path);
         }
 
-        public TaskDatabase GetTaskDatabase(string profileId)
+        public CategoryDatabase GetCategoryDatabase(string profileId)
         {
-            var dbPath = Path.Combine("D:/Шарага/С#/db", $"tasks_{profileId}.db3");
-            return new TaskDatabase(dbPath);
+            var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_categories.db3");
+            return new CategoryDatabase(path);
+        }
+
+        public BudgetDatabase GetBudgetDatabase(string profileId)
+        {
+            var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_budgets.db3");
+            return new BudgetDatabase(path);
+        }
+
+        public AssetDatabase GetAssetDatabase(string profileId)
+        {
+            var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_assets.db3");
+            return new AssetDatabase(path);
         }
 
         public void UpdateProfileStatistics(int tasksCount, int notesCount, TimeSpan trackedTime)
@@ -194,15 +193,6 @@ namespace Mauixui.Services
                 profile.TotalTrackedTime = trackedTime;
                 UpdateProfile(profile);
             }
-        }
-
-        public FinanceDatabase GetFinanceDatabase(string profileId)
-        {
-            string dbPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                $"finance_{profileId}.db3");
-
-            return new FinanceDatabase(dbPath);
         }
 
     }

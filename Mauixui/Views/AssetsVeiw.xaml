@@ -1,0 +1,33 @@
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mauixui.Views.AssetsView"
+             BackgroundColor="#1E1E1E">
+
+    <VerticalStackLayout Padding="20" Spacing="15">
+        <Label Text="🏦 Активы и долги"
+               FontSize="24"
+               FontAttributes="Bold"
+               TextColor="White"/>
+
+        <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12">
+            <VerticalStackLayout Spacing="8">
+                <Entry x:Name="AssetNameEntry" Placeholder="Название" BackgroundColor="#40444B" TextColor="White"/>
+                <Picker x:Name="AssetTypePicker">
+                    <Picker.Items>
+                        <x:String>Актив</x:String>
+                        <x:String>Обязательство</x:String>
+                    </Picker.Items>
+                </Picker>
+                <Entry x:Name="AssetValueEntry" Placeholder="Сумма ₽" Keyboard="Numeric" BackgroundColor="#40444B" TextColor="White"/>
+                <Button Text="Добавить"
+                        BackgroundColor="#4CAF50"
+                        TextColor="White"
+                        Clicked="AddAsset"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <ScrollView>
+            <VerticalStackLayout x:Name="AssetsList" Spacing="8"/>
+        </ScrollView>
+    </VerticalStackLayout>
+</ContentView>

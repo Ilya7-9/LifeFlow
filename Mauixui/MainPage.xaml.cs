@@ -321,35 +321,5 @@ namespace Mauixui
             var currentActive = _currentActiveButton;
             SetActiveButton(currentActive);
         }
-
-        // Добавьте в MainPage.xaml.cs
-        private async void CheckAndCreateDatabase(object sender, EventArgs e)
-        {
-            try
-            {
-                var profileService = new ProfileService();
-                var currentProfile = profileService.GetCurrentProfile();
-
-                // Создаем тестовые данные чтобы БД точно существовала
-                var noteDb = profileService.GetNoteDatabase(currentProfile.Id);
-                var testNote = new NoteItem
-                {
-                    ProfileId = currentProfile.Id,
-                    Title = "Тест для DBeaver",
-                    Content = "Эта заметка создана для тестирования подключения к БД",
-                    Color = "Blue"
-                };
-                await noteDb.SaveNoteAsync(testNote);
-
-                var dbPath = Path.Combine(FileSystem.AppDataDirectory, $"notes_{currentProfile.Id}.db3");
-                await DisplayAlert("Готово",
-                    $"База данных создана и готова для подключения!\n\nПуть к файлу:\n{dbPath}",
-                    "OK");
-            }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Ошибка", ex.Message, "OK");
-            }
-        }
     }
 }

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mauixui.Views.CategoriesView"
+             BackgroundColor="#1E1E1E">
+
+    <VerticalStackLayout Padding="20" Spacing="15">
+        <Label Text="📁 Категории"
+               FontSize="24"
+               FontAttributes="Bold"
+               TextColor="White"/>
+
+        <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12">
+            <HorizontalStackLayout Spacing="10">
+                <Entry x:Name="CategoryEntry"
+                       Placeholder="Название категории"
+                       BackgroundColor="#40444B"
+                       PlaceholderColor="#888888"
+                       TextColor="White"
+                       WidthRequest="200"/>
+                <Picker x:Name="TypePicker" WidthRequest="120">
+                    <Picker.Items>
+                        <x:String>Доход</x:String>
+                        <x:String>Расход</x:String>
+                    </Picker.Items>
+                </Picker>
+                <Button Text="➕"
+                        BackgroundColor="#4CAF50"
+                        TextColor="White"
+                        Clicked="AddCategory"/>
+            </HorizontalStackLayout>
+        </Frame>
+
+        <ScrollView>
+            <VerticalStackLayout x:Name="CategoryList" Spacing="8"/>
+        </ScrollView>
+    </VerticalStackLayout>
+</ContentView>

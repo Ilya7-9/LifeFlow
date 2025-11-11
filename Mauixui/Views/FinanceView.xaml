@@ -5,66 +5,135 @@
              x:Class="Mauixui.Views.FinanceView"
              BackgroundColor="#1E1E1E">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto"
-          Padding="20">
+    <Grid x:Name="RootGrid">
 
-        <!-- Верхняя панель -->
-        <VerticalStackLayout Grid.Row="0"
-                             Spacing="10">
-            <Label Text="💰 Финансы"
-                   FontSize="24"
-                   FontAttributes="Bold"
-                   TextColor="#FFFFFF" />
+        <!-- 🔹 Главный экран финансов -->
+        <ScrollView x:Name="FinanceHome" Padding="20">
+            <VerticalStackLayout Spacing="15">
 
-            <!-- Поле поиска -->
-            <SearchBar x:Name="SearchBar"
-                       Placeholder="Поиск по категориям и описанию"
-                       TextChanged="OnSearchChanged"
-                       BackgroundColor="#2D2D30"
-                       TextColor="#FFFFFF"
-                       PlaceholderColor="#888888" />
-        </VerticalStackLayout>
+                <Label Text="💰 Финансы" FontSize="26" TextColor="White" FontAttributes="Bold"/>
+                <Label x:Name="BalanceLabel" Text="Баланс: 0 ₽" FontSize="20" TextColor="#23D160"/>
 
-        <!-- Круговая диаграмма -->
-        <Frame Grid.Row="1"
-               Margin="0,10,0,10"
-               Padding="10"
-               CornerRadius="12"
-               BackgroundColor="#2D2D30">
-            <microcharts:ChartView x:Name="ChartView"
-                                   HeightRequest="180" />
-        </Frame>
+                <HorizontalStackLayout Spacing="10">
+                    <Button Text="📁 Категории"
+                            BackgroundColor="#40444B"
+                            TextColor="White"
+                            Clicked="OpenCategories"/>
+                    <Button Text="💼 Бюджеты"
+                            BackgroundColor="#40444B"
+                            TextColor="White"
+                            Clicked="OpenBudgets"/>
+                    <Button Text="🏦 Активы"
+                            BackgroundColor="#40444B"
+                            TextColor="White"
+                            Clicked="OpenAssets"/>
+                    <Button Text="📊 Статистика"
+                            BackgroundColor="#40444B"
+                            TextColor="White"
+                            Clicked="OpenStatistics"/>
+                </HorizontalStackLayout>
 
-        <!-- Список транзакций -->
-        <ScrollView Grid.Row="2">
-            <VerticalStackLayout x:Name="FinanceList"
-                                 Spacing="8" />
+                <!-- Диаграмма -->
+                <Frame BackgroundColor="#2D2D30"
+        CornerRadius="16"
+        Padding="10">
+                    <VerticalStackLayout>
+                        <Label Text="Распределение расходов"
+                TextColor="#FFFFFF"
+                FontAttributes="Bold"
+                FontSize="16"
+                Margin="0,0,0,5"/>
+                        <microcharts:ChartView x:Name="ChartView"
+                                HeightRequest="200"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Добавление операции -->
+                <Frame BackgroundColor="#2D2D30"
+        CornerRadius="16"
+        Padding="12"
+        Margin="0,10,0,0">
+
+                    <VerticalStackLayout Spacing="10">
+
+                        <!-- Тип операции -->
+                        <HorizontalStackLayout Spacing="10">
+                            <Picker x:Name="TypePicker"
+                     WidthRequest="150"
+                     Title="Тип">
+                                <Picker.Items>
+                                    <x:String>Доход</x:String>
+                                    <x:String>Расход</x:String>
+                                </Picker.Items>
+                            </Picker>
+
+                            <Picker x:Name="CategoryPicker"
+                     WidthRequest="150"
+                     Title="Категория"/>
+                        </HorizontalStackLayout>
+
+                        <Entry x:Name="DescriptionEntry"
+                Placeholder="Описание"
+                BackgroundColor="#40444B"
+                TextColor="#FFFFFF"
+                PlaceholderColor="#888888"/>
+
+                        <Entry x:Name="AmountEntry"
+                Placeholder="Сумма"
+                Keyboard="Numeric"
+                BackgroundColor="#40444B"
+                TextColor="#FFFFFF"
+                PlaceholderColor="#888888"/>
+
+                        <DatePicker x:Name="DatePicker"
+                     Format="dd.MM.yyyy"
+                     TextColor="White"/>
+
+                        <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                            <Button Text="Добавить"
+                     BackgroundColor="#4CAF50"
+                     TextColor="White"
+                     Clicked="AddFinanceItem"/>
+                            <Button Text="Очистить"
+                     BackgroundColor="#FF4B4B"
+                     TextColor="White"
+                     Clicked="ClearFields"/>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- История -->
+                <Label Text="История операций"
+        TextColor="White"
+        FontAttributes="Bold"
+        FontSize="16"/>
+
+                <ScrollView HeightRequest="250">
+                    <VerticalStackLayout x:Name="FinanceList" Spacing="8"/>
+                </ScrollView>
+
+            </VerticalStackLayout>
         </ScrollView>
 
-        <!-- Панель добавления записи -->
-        <Frame Grid.Row="3"
-               Padding="10"
-               BackgroundColor="#2D2D30"
-               CornerRadius="12"
-               Margin="0,10,0,0">
-            <Grid ColumnDefinitions="*,Auto">
-                <Entry x:Name="AmountEntry"
-                       Placeholder="Сумма"
-                       Keyboard="Numeric"
-                       PlaceholderColor="#888888"
-                       TextColor="#FFFFFF"
-                       BackgroundColor="#40444B"
-                       Margin="0,0,5,0" />
+        <!-- 🔹 Контейнер для внутренних экранов -->
+        <Grid x:Name="InnerViewContainer"
+              IsVisible="False"
+              BackgroundColor="#1E1E1E">
 
-                <Button Text="➕"
-                        WidthRequest="50"
-                        HeightRequest="40"
-                        CornerRadius="10"
-                        BackgroundColor="#4CAF50"
+            <VerticalStackLayout>
+                <!-- Кнопка назад -->
+                <Button Text="← Назад"
+                        BackgroundColor="#40444B"
                         TextColor="White"
-                        Clicked="AddFinanceItem" />
-            </Grid>
-        </Frame>
+                        Margin="10"
+                        Clicked="GoBackToFinance"/>
 
+                <!-- Место, куда подставляем другой вид -->
+                <ContentView x:Name="InnerViewContent"/>
+            </VerticalStackLayout>
+        </Grid>
     </Grid>
+
 </ContentView>
+
+

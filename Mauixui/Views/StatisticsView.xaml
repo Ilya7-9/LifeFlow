@@ -1,0 +1,21 @@
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:microcharts="clr-namespace:Microcharts.Maui;assembly=Microcharts.Maui"
+             x:Class="Mauixui.Views.StatisticsView"
+             BackgroundColor="#1E1E1E">
+
+    <VerticalStackLayout Padding="20" Spacing="20">
+        <Label Text="📊 Статистика"
+               FontSize="24"
+               FontAttributes="Bold"
+               TextColor="White"/>
+
+        <microcharts:ChartView x:Name="ExpensesChart" HeightRequest="200"/>
+        <microcharts:ChartView x:Name="BalanceChart" HeightRequest="200"/>
+
+        <Button Text="Обновить"
+                BackgroundColor="#4CAF50"
+                TextColor="White"
+                Clicked="ReloadStatistics"/>
+    </VerticalStackLayout>
+</ContentView>

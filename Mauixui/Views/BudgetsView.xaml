@@ -1,0 +1,36 @@
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mauixui.Views.BudgetsView"
+             BackgroundColor="#1E1E1E">
+
+    <VerticalStackLayout Padding="20" Spacing="15">
+        <Label Text="💼 Бюджеты"
+               FontSize="24"
+               FontAttributes="Bold"
+               TextColor="White"/>
+
+        <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12">
+            <VerticalStackLayout Spacing="8">
+                <Entry x:Name="BudgetNameEntry"
+                       Placeholder="Название бюджета"
+                       BackgroundColor="#40444B"
+                       TextColor="White"/>
+                <Entry x:Name="BudgetLimitEntry"
+                       Placeholder="Лимит ₽"
+                       Keyboard="Numeric"
+                       BackgroundColor="#40444B"
+                       TextColor="White"/>
+                <DatePicker x:Name="StartDatePicker" TextColor="White" />
+                <DatePicker x:Name="EndDatePicker" TextColor="White" />
+                <Button Text="Создать"
+                        BackgroundColor="#4CAF50"
+                        TextColor="White"
+                        Clicked="AddBudget"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <ScrollView>
+            <VerticalStackLayout x:Name="BudgetList" Spacing="10"/>
+        </ScrollView>
+    </VerticalStackLayout>
+</ContentView>
