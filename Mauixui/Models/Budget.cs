@@ -1,22 +1,25 @@
 using SQLite;
-using System;
 
 namespace Mauixui.Models
 {
-    [Table("Budget")]
-    public class Budget
+    [Table("BudgetItem")]
+    public class BudgetItem
     {
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
         public string ProfileId { get; set; }
+        public string Category { get; set; }
+        public double Limit { get; set; }
+        public double Spent { get; set; }
+        public string Period { get; set; }   // week / month / year
+        public DateTime CreatedAt { get; set; }
+        public DateTime ResetDate { get; set; }
 
-        public string Name { get; set; }
-        public decimal Limit { get; set; }
+        [Ignore]
+        public double Progress => Limit == 0 ? 0 : Spent / Limit;
 
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-
-        public decimal CurrentSpending { get; set; }
+        [Ignore]
+        public bool IsExceeded => Spent > Limit;
     }
 }

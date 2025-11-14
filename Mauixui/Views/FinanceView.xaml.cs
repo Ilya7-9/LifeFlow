@@ -16,6 +16,8 @@ namespace Mauixui.Views
         private List<FinanceItem> _items = new();
         private FinanceDatabase _db;
         private string _profileId;
+        private CategoryDatabase _categoryDb;
+        private List<CategoryItem> _categories = new();
 
         public FinanceView()
         {
@@ -24,9 +26,52 @@ namespace Mauixui.Views
             var profileService = new ProfileService();
             _profileId = profileService.GetCurrentProfile().Id;
             _db = profileService.GetFinanceDatabase(_profileId);
+            _categoryDb = profileService.GetCategoryDatabase(_profileId);
 
             LoadFinanceItems();
+            LoadCategories();
         }
+
+        private async void LoadCategories()
+        {
+            try
+            {
+                _categories = await _categoryDb.GetCategoriesAsync(_profileId);
+
+                // Проверяем, есть ли "Без категории" в базе
+                bool hasDefault = _categories.Any(c => c.Name == "Без категории");
+
+                if (!hasDefault)
+                {
+                    var defaultCategory = new CategoryItem
+                    {
+                        ProfileId = _profileId,
+                        Name = "Без категории",
+                        Type = "Расход"
+                    };
+                    await _categoryDb.SaveCategoryAsync(defaultCategory);
+
+                    // После вставки перезагружаем список
+                    _categories = await _categoryDb.GetCategoriesAsync(_profileId);
+                }
+
+                // 🔄 Обновляем Picker
+                CategoryPicker.Items.Clear();
+                foreach (var cat in _categories)
+                {
+                    CategoryPicker.Items.Add(cat.Name);
+                }
+
+                // Устанавливаем выбранной "Без категории" (если есть)
+                var defaultIndex = CategoryPicker.Items.IndexOf("Без категории");
+                CategoryPicker.SelectedIndex = defaultIndex >= 0 ? defaultIndex : 0;
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.MainPage.DisplayAlert("Ошибка", $"Не удалось загрузить категории:\n{ex.Message}", "OK");
+            }
+        }
+
 
         // === Добавление дохода ===
         private async void AddIncomeClicked(object sender, EventArgs e)
@@ -81,7 +126,6 @@ namespace Mauixui.Views
             _items = await _db.GetItemsAsync(_profileId);
             RenderFinanceItems();
             UpdateBalance();
-            UpdateChart();
         }
 
         // === Рендер списка операций ===
@@ -126,7 +170,7 @@ namespace Mauixui.Views
 
                 var desc = new Label
                 {
-                    Text = $"{item.Description} ({item.Category})\n{item.Date:dd.MM.yyyy HH:mm}",
+                    Text = $"{item.Description} ({item.Category})\n{item.Date:dd.MM.yyyy}",
                     TextColor = Color.FromArgb("#FFFFFF"),
                     FontSize = 13
                 };
@@ -159,45 +203,6 @@ namespace Mauixui.Views
 
             BalanceLabel.Text = $"Баланс: {balance:F2} ₽";
             BalanceLabel.TextColor = balance >= 0 ? Color.FromArgb("#23D160") : Color.FromArgb("#FF4B4B");
-        }
-
-        // === Обновление диаграммы ===
-        private void UpdateChart()
-        {
-            var grouped = _items
-                .Where(i => i.Type == "Расход")
-                .GroupBy(i => i.Category)
-                .Select(g => new { Category = g.Key, Sum = g.Sum(i => i.Amount) })
-                .ToList();
-
-            if (!grouped.Any())
-            {
-                ChartView.Chart = null;
-                return;
-            }
-
-            var entries = grouped.Select(g => new ChartEntry((float)g.Sum)
-            {
-                Label = g.Category,
-                ValueLabel = $"{g.Sum:F0}",
-                Color = SKColor.Parse(RandomColor(g.Category))
-            }).ToList();
-
-            ChartView.Chart = new DonutChart
-            {
-                Entries = entries,
-                LabelTextSize = 28,
-                BackgroundColor = SKColors.Transparent
-            };
-        }
-
-        private string RandomColor(string seed)
-        {
-            var hash = seed.GetHashCode();
-            var r = (byte)(hash & 0xFF);
-            var g = (byte)((hash >> 8) & 0xFF);
-            var b = (byte)((hash >> 16) & 0xFF);
-            return $"#{r:X2}{g:X2}{b:X2}";
         }
 
         // 🔹 Очистка полей

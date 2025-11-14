@@ -1,36 +1,41 @@
-<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Mauixui.Views.BudgetsView"
-             BackgroundColor="#1E1E1E">
+<ContentView
+    x:Class="Mauixui.Views.BudgetsView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <VerticalStackLayout Padding="20" Spacing="15">
-        <Label Text="💼 Бюджеты"
-               FontSize="24"
-               FontAttributes="Bold"
-               TextColor="White"/>
+    <VerticalStackLayout Padding="20" Spacing="12">
 
-        <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12">
-            <VerticalStackLayout Spacing="8">
-                <Entry x:Name="BudgetNameEntry"
-                       Placeholder="Название бюджета"
-                       BackgroundColor="#40444B"
-                       TextColor="White"/>
-                <Entry x:Name="BudgetLimitEntry"
-                       Placeholder="Лимит ₽"
-                       Keyboard="Numeric"
-                       BackgroundColor="#40444B"
-                       TextColor="White"/>
-                <DatePicker x:Name="StartDatePicker" TextColor="White" />
-                <DatePicker x:Name="EndDatePicker" TextColor="White" />
-                <Button Text="Создать"
-                        BackgroundColor="#4CAF50"
-                        TextColor="White"
-                        Clicked="AddBudget"/>
-            </VerticalStackLayout>
-        </Frame>
+        <Label Text="Бюджеты" FontSize="26" TextColor="White" />
 
-        <ScrollView>
-            <VerticalStackLayout x:Name="BudgetList" Spacing="10"/>
-        </ScrollView>
+        <Button 
+            Text="Добавить бюджет"
+            Clicked="AddBudgetClicked"
+            BackgroundColor="#40444B"
+            TextColor="White"
+            CornerRadius="12"/>
+
+        <CollectionView x:Name="BudgetsList" SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame BackgroundColor="#2D2D30" CornerRadius="12" Padding="12" Margin="0,5">
+                        <VerticalStackLayout>
+                            <Label Text="{Binding Category}" TextColor="White" FontSize="18"/>
+                            <Label Text="{Binding Limit, StringFormat='Лимит: {0} ₽'}" TextColor="LightGray"/>
+                            <Label Text="{Binding Spent, StringFormat='Потрачено: {0} ₽'}" TextColor="LightGray"/>
+
+                            <Button 
+                                Text="Удалить"
+                                Clicked="DeleteBudgetClicked"
+                                BackgroundColor="#8B0000"
+                                TextColor="White"
+                                CornerRadius="10"
+                                Margin="0,5,0,0"
+                                CommandParameter="{Binding}"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
     </VerticalStackLayout>
 </ContentView>

@@ -1,92 +1,95 @@
 using Microsoft.Maui.Controls;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Mauixui.Services;
 using Mauixui.Models;
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Mauixui.Views
 {
     public partial class BudgetsView : ContentView
     {
-        private List<Budget> _budgets = new();
-        private BudgetDatabase _db;
-        private string _profileId;
+        private readonly BudgetDatabase _budgetDb;
+        private readonly FinanceDatabase _financeDb;
+        private readonly CategoryDatabase _categoryDb;
+        private readonly string _profileId;
+
+        private List<BudgetItem> _budgets = new();
+        private List<FinanceItem> _transactions = new();
+        private List<CategoryItem> _categories = new();
 
         public BudgetsView()
         {
             InitializeComponent();
 
-            var profileService = new ProfileService();
-            _profileId = profileService.GetCurrentProfile().Id;
-            _db = profileService.GetBudgetDatabase(_profileId);
+            var ps = new ProfileService();
+            _profileId = ps.GetCurrentProfile().Id;
+
+            _budgetDb = ps.GetBudgetDatabase(_profileId);
+            _financeDb = ps.GetFinanceDatabase(_profileId);
+            _categoryDb = ps.GetCategoryDatabase(_profileId);
 
             LoadBudgets();
         }
 
         private async void LoadBudgets()
         {
-            _budgets = await _db.GetBudgetsAsync(_profileId);
-            RenderBudgets();
+            _budgets = await _budgetDb.GetBudgetsAsync(_profileId);
+            _transactions = await _financeDb.GetItemsAsync(_profileId);
+            _categories = await _categoryDb.GetCategoriesAsync(_profileId);
+
+            // Автоматический пересчёт потраченной суммы
+            foreach (var b in _budgets)
+            {
+                b.Spent = (double)_transactions
+                    .Where(t => t.Type == "Расход" && t.Category == b.Category)
+                    .Sum(t => t.Amount);
+            }
+
+            BudgetsList.ItemsSource = _budgets;
         }
 
-        private async void AddBudget(object sender, EventArgs e)
+        private async void AddBudgetClicked(object sender, EventArgs e)
         {
-            if (!decimal.TryParse(BudgetLimitEntry.Text, out decimal limit)) return;
+            string category = await Application.Current.MainPage.DisplayActionSheet(
+                "Выберите категорию для бюджета:",
+                "Отмена", null,
+                _categories.Select(c => c.Name).ToArray()
+            );
 
-            var budget = new Budget
+            if (string.IsNullOrEmpty(category))
+                return;
+
+            string limitStr = await Application.Current.MainPage.DisplayPromptAsync(
+                "Лимит",
+                "Введите сумму бюджета:",
+                keyboard: Keyboard.Numeric);
+
+            if (!double.TryParse(limitStr, out double limit))
+                return;
+
+            var item = new BudgetItem
             {
                 ProfileId = _profileId,
-                Name = BudgetNameEntry.Text,
+                Category = category,
                 Limit = limit,
-                StartDate = StartDatePicker.Date,
-                EndDate = EndDatePicker.Date
+                CreatedAt = DateTime.Now,
+                ResetDate = DateTime.Now.AddMonths(1)
             };
 
-            await _db.SaveBudgetAsync(budget);
+            await _budgetDb.SaveBudgetAsync(item);
             LoadBudgets();
         }
 
-        private void RenderBudgets()
+        private async void DeleteBudgetClicked(object sender, EventArgs e)
         {
-            BudgetList.Children.Clear();
+            var item = (sender as Button).CommandParameter as BudgetItem;
 
-            if (!_budgets.Any())
-            {
-                BudgetList.Children.Add(new Label
-                {
-                    Text = "Нет бюджетов",
-                    TextColor = Color.FromArgb("#888888"),
-                    HorizontalOptions = LayoutOptions.Center
-                });
-                return;
-            }
+            if (item == null) return;
 
-            foreach (var b in _budgets)
-            {
-                var progress = Math.Min(1.0, (double)b.CurrentSpending / (double)b.Limit);
-                var bar = new ProgressBar { Progress = progress, ProgressColor = Color.FromArgb("#23D160") };
-
-                var stack = new VerticalStackLayout
-                {
-                    Spacing = 4,
-                    Children =
-                    {
-                        new Label { Text = $"{b.Name} — {b.CurrentSpending:F0}/{b.Limit:F0} ₽", TextColor = Color.FromArgb("#FFFFFF") },
-                        bar
-                    }
-                };
-
-                var frame = new Frame
-                {
-                    CornerRadius = 12,
-                    BackgroundColor = Color.FromArgb("#40444B"),
-                    Padding = 10,
-                    Content = stack
-                };
-                BudgetList.Children.Add(frame);
-            }
+            await _budgetDb.DeleteBudgetAsync(item);
+            LoadBudgets();
         }
     }
 }

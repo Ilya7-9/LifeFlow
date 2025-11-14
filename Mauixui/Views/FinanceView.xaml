@@ -33,21 +33,6 @@
                             Clicked="OpenStatistics"/>
                 </HorizontalStackLayout>
 
-                <!-- Диаграмма -->
-                <Frame BackgroundColor="#2D2D30"
-        CornerRadius="16"
-        Padding="10">
-                    <VerticalStackLayout>
-                        <Label Text="Распределение расходов"
-                TextColor="#FFFFFF"
-                FontAttributes="Bold"
-                FontSize="16"
-                Margin="0,0,0,5"/>
-                        <microcharts:ChartView x:Name="ChartView"
-                                HeightRequest="200"/>
-                    </VerticalStackLayout>
-                </Frame>
-
                 <!-- Добавление операции -->
                 <Frame BackgroundColor="#2D2D30"
         CornerRadius="16"
@@ -59,8 +44,9 @@
                         <!-- Тип операции -->
                         <HorizontalStackLayout Spacing="10">
                             <Picker x:Name="TypePicker"
-                     WidthRequest="150"
-                     Title="Тип">
+                                     WidthRequest="150"
+                                     Title="Тип"
+                                     >   
                                 <Picker.Items>
                                     <x:String>Доход</x:String>
                                     <x:String>Расход</x:String>

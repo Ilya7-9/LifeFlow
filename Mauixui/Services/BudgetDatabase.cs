@@ -12,17 +12,17 @@ namespace Mauixui.Services
         public BudgetDatabase(string dbPath)
         {
             _database = new SQLiteAsyncConnection(dbPath);
-            _database.CreateTableAsync<Budget>().Wait();
+            _database.CreateTableAsync<BudgetItem>().Wait();
         }
 
-        public Task<List<Budget>> GetBudgetsAsync(string profileId)
+        public Task<List<BudgetItem>> GetBudgetsAsync(string profileId)
         {
-            return _database.Table<Budget>()
+            return _database.Table<BudgetItem>()
                 .Where(b => b.ProfileId == profileId)
                 .ToListAsync();
         }
 
-        public Task<int> SaveBudgetAsync(Budget budget)
+        public Task<int> SaveBudgetAsync(BudgetItem budget)
         {
             if (budget.Id != 0)
                 return _database.UpdateAsync(budget);
@@ -30,7 +30,7 @@ namespace Mauixui.Services
                 return _database.InsertAsync(budget);
         }
 
-        public Task<int> DeleteBudgetAsync(Budget budget)
+        public Task<int> DeleteBudgetAsync(BudgetItem budget)
         {
             return _database.DeleteAsync(budget);
         }
