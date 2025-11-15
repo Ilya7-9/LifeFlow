@@ -2,37 +2,37 @@ using SQLite;
 using Mauixui.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Mauixui.Services
 {
     public class AssetDatabase
     {
-        private readonly SQLiteAsyncConnection _database;
+        private readonly SQLiteAsyncConnection _db;
 
         public AssetDatabase(string dbPath)
         {
-            _database = new SQLiteAsyncConnection(dbPath);
-            _database.CreateTableAsync<Asset>().Wait();
+            _db = new SQLiteAsyncConnection(dbPath);
+            _db.CreateTableAsync<AssetItem>().Wait();
         }
 
-        public Task<List<Asset>> GetAssetsAsync(string profileId)
+        public Task<List<AssetItem>> GetAssetsAsync(string profileId)
         {
-            return _database.Table<Asset>()
+            return _db.Table<AssetItem>()
                 .Where(a => a.ProfileId == profileId)
+                .OrderByDescending(a => a.DateAcquired)
                 .ToListAsync();
         }
 
-        public Task<int> SaveAssetAsync(Asset asset)
+        public Task<int> SaveAssetAsync(AssetItem item)
         {
-            if (asset.Id != 0)
-                return _database.UpdateAsync(asset);
-            else
-                return _database.InsertAsync(asset);
+            if (item.Id != 0) return _db.UpdateAsync(item);
+            return _db.InsertAsync(item);
         }
 
-        public Task<int> DeleteAssetAsync(Asset asset)
+        public Task<int> DeleteAssetAsync(AssetItem item)
         {
-            return _database.DeleteAsync(asset);
+            return _db.DeleteAsync(item);
         }
     }
 }

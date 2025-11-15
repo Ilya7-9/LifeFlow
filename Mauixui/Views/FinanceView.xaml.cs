@@ -38,7 +38,6 @@ namespace Mauixui.Views
             {
                 _categories = await _categoryDb.GetCategoriesAsync(_profileId);
 
-                // Проверяем, есть ли "Без категории" в базе
                 bool hasDefault = _categories.Any(c => c.Name == "Без категории");
 
                 if (!hasDefault)
@@ -51,18 +50,15 @@ namespace Mauixui.Views
                     };
                     await _categoryDb.SaveCategoryAsync(defaultCategory);
 
-                    // После вставки перезагружаем список
                     _categories = await _categoryDb.GetCategoriesAsync(_profileId);
                 }
 
-                // 🔄 Обновляем Picker
                 CategoryPicker.Items.Clear();
                 foreach (var cat in _categories)
                 {
                     CategoryPicker.Items.Add(cat.Name);
                 }
 
-                // Устанавливаем выбранной "Без категории" (если есть)
                 var defaultIndex = CategoryPicker.Items.IndexOf("Без категории");
                 CategoryPicker.SelectedIndex = defaultIndex >= 0 ? defaultIndex : 0;
             }
@@ -72,8 +68,6 @@ namespace Mauixui.Views
             }
         }
 
-
-        // === Добавление дохода ===
         private async void AddIncomeClicked(object sender, EventArgs e)
         {
             if (!decimal.TryParse(AmountEntry.Text, out decimal amount) || amount <= 0)
@@ -97,7 +91,6 @@ namespace Mauixui.Views
             LoadFinanceItems();
         }
 
-        // === Добавление расхода ===
         private async void AddExpenseClicked(object sender, EventArgs e)
         {
             if (!decimal.TryParse(AmountEntry.Text, out decimal amount) || amount <= 0)
@@ -128,7 +121,6 @@ namespace Mauixui.Views
             UpdateBalance();
         }
 
-        // === Рендер списка операций ===
         private void RenderFinanceItems(List<FinanceItem>? listOverride = null)
         {
             var list = listOverride ?? _items;
@@ -158,6 +150,8 @@ namespace Mauixui.Views
                     HasShadow = true,
                     Margin = new Thickness(0, 0, 0, 8)
                 };
+
+                var layout = new VerticalStackLayout { Spacing = 8 };
 
                 var grid = new Grid
                 {
@@ -189,12 +183,44 @@ namespace Mauixui.Views
                 grid.Children.Add(desc);
                 grid.Children.Add(amountLabel);
 
-                frame.Content = grid;
+                layout.Children.Add(grid);
+
+                // ДОБАВЛЕНА КНОПКА УДАЛЕНИЯ
+                var deleteBtn = new Button
+                {
+                    Text = "Удалить",
+                    BackgroundColor = Color.FromArgb("#FF4B4B"),
+                    TextColor = Color.FromArgb("fff"),
+                    CornerRadius = 10,
+                    CommandParameter = item,
+                    HorizontalOptions = LayoutOptions.End
+                };
+                deleteBtn.Clicked += DeleteOperationClicked;
+
+                layout.Children.Add(deleteBtn);
+
+                frame.Content = layout;
                 FinanceList.Children.Add(frame);
             }
         }
 
-        // === Расчёт и отображение баланса ===
+        private async void DeleteOperationClicked(object sender, EventArgs e)
+        {
+            if (sender is Button btn && btn.CommandParameter is FinanceItem item)
+            {
+                bool ok = await Application.Current.MainPage.DisplayAlert(
+                    "Удаление",
+                    $"Удалить запись '{item.Description}'?",
+                    "Удалить", "Отмена");
+
+                if (!ok) return;
+
+                await _db.DeleteItemAsync(item);
+
+                LoadFinanceItems();
+            }
+        }
+
         private void UpdateBalance()
         {
             decimal income = _items.Where(i => i.Type == "Доход").Sum(i => i.Amount);
@@ -205,7 +231,6 @@ namespace Mauixui.Views
             BalanceLabel.TextColor = balance >= 0 ? Color.FromArgb("#23D160") : Color.FromArgb("#FF4B4B");
         }
 
-        // 🔹 Очистка полей
         private void ClearFields(object sender, EventArgs e)
         {
             TypePicker.SelectedIndex = -1;
@@ -215,7 +240,6 @@ namespace Mauixui.Views
             DatePicker.Date = DateTime.Today;
         }
 
-        // 🔹 Добавление записи
         private async void AddFinanceItem(object sender, EventArgs e)
         {
             if (TypePicker.SelectedIndex == -1 || CategoryPicker.SelectedIndex == -1)
@@ -247,19 +271,13 @@ namespace Mauixui.Views
 
         private void ShowInnerView(ContentView view)
         {
-            // Скрываем главный экран
             FinanceHome.IsVisible = false;
-
-            // Показываем внутренний контейнер
             InnerViewContainer.IsVisible = true;
-
-            // Подменяем контент
             InnerViewContent.Content = view;
         }
 
         private void GoBackToFinance(object sender, EventArgs e)
         {
-            // Возврат к основному экрану
             InnerViewContainer.IsVisible = false;
             InnerViewContent.Content = null;
             FinanceHome.IsVisible = true;
@@ -284,7 +302,5 @@ namespace Mauixui.Views
         {
             ShowInnerView(new StatisticsView());
         }
-
-
     }
 }

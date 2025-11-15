@@ -7,7 +7,7 @@
 
     <Grid x:Name="RootGrid">
 
-        <!-- 🔹 Главный экран финансов -->
+        <!-- Главная страница -->
         <ScrollView x:Name="FinanceHome" Padding="20">
             <VerticalStackLayout Spacing="15">
 
@@ -15,111 +15,68 @@
                 <Label x:Name="BalanceLabel" Text="Баланс: 0 ₽" FontSize="20" TextColor="#23D160"/>
 
                 <HorizontalStackLayout Spacing="10">
-                    <Button Text="📁 Категории"
-                            BackgroundColor="#40444B"
-                            TextColor="White"
-                            Clicked="OpenCategories"/>
-                    <Button Text="💼 Бюджеты"
-                            BackgroundColor="#40444B"
-                            TextColor="White"
-                            Clicked="OpenBudgets"/>
-                    <Button Text="🏦 Активы"
-                            BackgroundColor="#40444B"
-                            TextColor="White"
-                            Clicked="OpenAssets"/>
-                    <Button Text="📊 Статистика"
-                            BackgroundColor="#40444B"
-                            TextColor="White"
-                            Clicked="OpenStatistics"/>
+                    <Button Text="📁 Категории" BackgroundColor="#40444B" TextColor="White" Clicked="OpenCategories"/>
+                    <Button Text="💼 Бюджеты" BackgroundColor="#40444B" TextColor="White" Clicked="OpenBudgets"/>
+                    <Button Text="🏦 Активы" BackgroundColor="#40444B" TextColor="White" Clicked="OpenAssets"/>
+                    <Button Text="📊 Статистика" BackgroundColor="#40444B" TextColor="White" Clicked="OpenStatistics"/>
                 </HorizontalStackLayout>
 
                 <!-- Добавление операции -->
-                <Frame BackgroundColor="#2D2D30"
-        CornerRadius="16"
-        Padding="12"
-        Margin="0,10,0,0">
-
+                <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12" Margin="0,10,0,0">
                     <VerticalStackLayout Spacing="10">
 
-                        <!-- Тип операции -->
                         <HorizontalStackLayout Spacing="10">
-                            <Picker x:Name="TypePicker"
-                                     WidthRequest="150"
-                                     Title="Тип"
-                                     >   
+                            <Picker x:Name="TypePicker" WidthRequest="150" Title="Тип">
                                 <Picker.Items>
                                     <x:String>Доход</x:String>
                                     <x:String>Расход</x:String>
                                 </Picker.Items>
                             </Picker>
 
-                            <Picker x:Name="CategoryPicker"
-                     WidthRequest="150"
-                     Title="Категория"/>
+                            <Picker x:Name="CategoryPicker" WidthRequest="150" Title="Категория"/>
                         </HorizontalStackLayout>
 
-                        <Entry x:Name="DescriptionEntry"
-                Placeholder="Описание"
-                BackgroundColor="#40444B"
-                TextColor="#FFFFFF"
-                PlaceholderColor="#888888"/>
+                        <Entry x:Name="DescriptionEntry" Placeholder="Описание"
+                               BackgroundColor="#40444B" TextColor="White" PlaceholderColor="#888888"/>
 
-                        <Entry x:Name="AmountEntry"
-                Placeholder="Сумма"
-                Keyboard="Numeric"
-                BackgroundColor="#40444B"
-                TextColor="#FFFFFF"
-                PlaceholderColor="#888888"/>
+                        <Entry x:Name="AmountEntry" Placeholder="Сумма" Keyboard="Numeric"
+                               BackgroundColor="#40444B" TextColor="White" PlaceholderColor="#888888"/>
 
-                        <DatePicker x:Name="DatePicker"
-                     Format="dd.MM.yyyy"
-                     TextColor="White"/>
+                        <DatePicker x:Name="DatePicker" Format="dd.MM.yyyy" TextColor="White"/>
 
                         <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
-                            <Button Text="Добавить"
-                     BackgroundColor="#4CAF50"
-                     TextColor="White"
-                     Clicked="AddFinanceItem"/>
-                            <Button Text="Очистить"
-                     BackgroundColor="#FF4B4B"
-                     TextColor="White"
-                     Clicked="ClearFields"/>
+                            <Button Text="Добавить" BackgroundColor="#4CAF50" TextColor="White" Clicked="AddFinanceItem"/>
+                            <Button Text="Очистить" BackgroundColor="#FF4B4B" TextColor="White" Clicked="ClearFields"/>
                         </HorizontalStackLayout>
+
                     </VerticalStackLayout>
                 </Frame>
 
-                <!-- История -->
-                <Label Text="История операций"
-        TextColor="White"
-        FontAttributes="Bold"
-        FontSize="16"/>
+                <Label Text="История операций" TextColor="White" FontAttributes="Bold" FontSize="16"/>
 
+                <!-- История (ПРАВИЛЬНО) -->
                 <ScrollView HeightRequest="250">
-                    <VerticalStackLayout x:Name="FinanceList" Spacing="8"/>
+                    <VerticalStackLayout x:Name="FinanceList" Spacing="6"/>
                 </ScrollView>
 
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- 🔹 Контейнер для внутренних экранов -->
+        <!-- Внутренние экраны -->
         <Grid x:Name="InnerViewContainer"
-              IsVisible="False"
-              BackgroundColor="#1E1E1E">
+              BackgroundColor="#1E1E1E"
+              IsVisible="False">
 
             <VerticalStackLayout>
-                <!-- Кнопка назад -->
-                <Button Text="← Назад"
-                        BackgroundColor="#40444B"
-                        TextColor="White"
-                        Margin="10"
-                        Clicked="GoBackToFinance"/>
 
-                <!-- Место, куда подставляем другой вид -->
+                <Button Text="← Назад" BackgroundColor="#40444B" TextColor="White"
+                        Margin="10" Clicked="GoBackToFinance"/>
+
                 <ContentView x:Name="InnerViewContent"/>
             </VerticalStackLayout>
+
         </Grid>
+
     </Grid>
 
 </ContentView>
-
-

@@ -182,6 +182,12 @@ namespace Mauixui.Services
             var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_assets.db3");
             return new AssetDatabase(path);
         }
+        public DebtDatabase GetDebtDatabase(string profileId)
+        {
+            var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_debts.db3");
+            return new DebtDatabase(path);
+        }
+
 
         public void UpdateProfileStatistics(int tasksCount, int notesCount, TimeSpan trackedTime)
         {
