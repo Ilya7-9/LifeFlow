@@ -1,21 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:microcharts="clr-namespace:Microcharts.Maui;assembly=Microcharts.Maui"
              x:Class="Mauixui.Views.StatisticsView"
              BackgroundColor="#1E1E1E">
 
-    <VerticalStackLayout Padding="20" Spacing="20">
-        <Label Text="📊 Статистика"
-               FontSize="24"
+    <!-- Корневой Grid чтобы гарантировать размер и поведение FillAndExpand -->
+    <Grid RowDefinitions="*,Auto" Padding="0">
+
+        <!-- ScrollView должен быть один дочерний элемент и занимать доступное место -->
+        <ScrollView Grid.Row="0" Padding="20">
+            <VerticalStackLayout Spacing="20">
+
+                <Label Text="📊 Статистика"
                FontAttributes="Bold"
-               TextColor="White"/>
+               FontSize="26"
+               TextColor="White"
+               HorizontalOptions="Center"/>
 
-        <microcharts:ChartView x:Name="ExpensesChart" HeightRequest="200"/>
-        <microcharts:ChartView x:Name="BalanceChart" HeightRequest="200"/>
+                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
+                    <VerticalStackLayout>
+                        <Label Text="Общая финансовая сводка" TextColor="White" FontAttributes="Bold" FontSize="18"/>
+                        <Label x:Name="SummaryIncome" TextColor="#23D160" FontSize="15"/>
+                        <Label x:Name="SummaryExpense" TextColor="#FF4B4B" FontSize="15"/>
+                        <Label x:Name="SummaryNet" TextColor="#AAAAAA" FontSize="15"/>
+                    </VerticalStackLayout>
+                </Frame>
 
-        <Button Text="Обновить"
-                BackgroundColor="#4CAF50"
-                TextColor="White"
-                Clicked="ReloadStatistics"/>
-    </VerticalStackLayout>
+                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
+                    <VerticalStackLayout>
+                        <Label Text="ТОП категорий расходов" TextColor="White" FontAttributes="Bold" FontSize="18"/>
+                        <VerticalStackLayout x:Name="TopExpensesList" Spacing="4"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
+                    <VerticalStackLayout>
+                        <Label Text="ТОП категорий доходов" TextColor="White" FontAttributes="Bold" FontSize="18"/>
+                        <VerticalStackLayout x:Name="TopIncomeList" Spacing="4"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
+                    <VerticalStackLayout>
+                        <Label Text="Лучший / Худший месяц" TextColor="White" FontAttributes="Bold" FontSize="18"/>
+                        <Label x:Name="BestMonth" TextColor="#23D160"/>
+                        <Label x:Name="WorstMonth" TextColor="#FF4B4B"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
+                    <VerticalStackLayout>
+                        <Label Text="Прогноз на текущий месяц" TextColor="White" FontAttributes="Bold" FontSize="18"/>
+                        <Label x:Name="PredictionLabel" TextColor="#AAAAAA"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Кнопка внизу контента (внутри ScrollView) -->
+                <Button Text="Обновить статистику" BackgroundColor="#4CAF50" TextColor="White" Clicked="ReloadStatistics"/>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Вторая строка грида: можно поместить тулбар/футер если нужно -->
+        <StackLayout Grid.Row="1" Orientation="Horizontal" Padding="12" HorizontalOptions="End">
+            <!-- Пустая или кнопки -->
+        </StackLayout>
+
+    </Grid>
 </ContentView>
