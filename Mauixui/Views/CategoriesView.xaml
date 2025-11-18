@@ -10,6 +10,7 @@
                FontAttributes="Bold"
                TextColor="White"/>
 
+
         <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12">
             <HorizontalStackLayout Spacing="10">
                 <Entry x:Name="CategoryEntry"

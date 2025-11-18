@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Mauixui.Models;
 
 namespace Mauixui.Services
@@ -15,12 +14,16 @@ namespace Mauixui.Services
         private bool _isTracking;
         private ActiveWindowInfo _currentWindow;
         private DateTime _currentWindowStartTime;
+
         private readonly List<AppUsageRecord> _sessionRecords;
         private readonly List<WebsiteUsageRecord> _websiteRecords;
 
-        // ДЕЛАЕМ ПОЛЯ ПУБЛИЧНЫМИ ИЛИ СОЗДАЕМ ПУБЛИЧНЫЕ СВОЙСТВА
+        // Живые счетчики времени (используются трекером и UI)
         public Dictionary<string, TimeSpan> CurrentAppTimes { get; private set; }
         public Dictionary<string, TimeSpan> CurrentWebsiteTimes { get; private set; }
+
+        // 🔥 Главное добавление — событие каждый тик
+        public event Action OnTick;
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
@@ -41,7 +44,6 @@ namespace Mauixui.Services
             _sessionRecords = new List<AppUsageRecord>();
             _websiteRecords = new List<WebsiteUsageRecord>();
 
-            // ИНИЦИАЛИЗИРУЕМ ПУБЛИЧНЫЕ СВОЙСТВА
             CurrentAppTimes = new Dictionary<string, TimeSpan>();
             CurrentWebsiteTimes = new Dictionary<string, TimeSpan>();
         }
@@ -52,6 +54,8 @@ namespace Mauixui.Services
 
             _isTracking = true;
             _currentWindowStartTime = DateTime.Now;
+
+            // 🔥 каждая секунда → TrackActiveWindow
             _trackingTimer = new Timer(TrackActiveWindow, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
         }
 
@@ -65,6 +69,9 @@ namespace Mauixui.Services
         private void TrackActiveWindow(object state)
         {
             if (!_isTracking) return;
+
+            // 🔥 Событие ТИКА — используется для LiveTotalTime
+            OnTick?.Invoke();
 
             var newWindow = GetActiveWindowInfo();
 
@@ -83,10 +90,10 @@ namespace Mauixui.Services
             }
         }
 
-        private bool IsSameWindow(ActiveWindowInfo window1, ActiveWindowInfo window2)
+        private bool IsSameWindow(ActiveWindowInfo w1, ActiveWindowInfo w2)
         {
-            return window1.ProcessName == window2.ProcessName &&
-                   window1.WindowTitle == window2.WindowTitle;
+            return w1.ProcessName == w2.ProcessName &&
+                   w1.WindowTitle == w2.WindowTitle;
         }
 
         private void StartNewSession(ActiveWindowInfo window)
@@ -101,7 +108,6 @@ namespace Mauixui.Services
                 return;
 
             var duration = DateTime.Now - _currentWindowStartTime;
-
             if (duration.TotalSeconds < 1) return;
 
             var record = new AppUsageRecord
@@ -144,12 +150,11 @@ namespace Mauixui.Services
         {
             if (_currentWindow == null) return;
 
-            var currentDuration = DateTime.Now - _currentWindowStartTime;
+            var duration = DateTime.Now - _currentWindowStartTime;
             var appName = GetFriendlyAppName(_currentWindow.ProcessName);
 
-            // ОБНОВЛЯЕМ ПУБЛИЧНЫЕ СВОЙСТВА
-            CurrentAppTimes[appName] = currentDuration;
-            OnAppUsageUpdated?.Invoke(appName, currentDuration);
+            CurrentAppTimes[appName] = duration;
+            OnAppUsageUpdated?.Invoke(appName, duration);
         }
 
         private void UpdateWebsiteStats()
@@ -157,11 +162,10 @@ namespace Mauixui.Services
             if (_currentWindow == null) return;
 
             var website = ExtractWebsiteFromTitle(_currentWindow.WindowTitle);
-            var currentDuration = DateTime.Now - _currentWindowStartTime;
+            var duration = DateTime.Now - _currentWindowStartTime;
 
-            // ОБНОВЛЯЕМ ПУБЛИЧНЫЕ СВОЙСТВА
-            CurrentWebsiteTimes[website] = currentDuration;
-            OnWebsiteUsageUpdated?.Invoke(website, currentDuration);
+            CurrentWebsiteTimes[website] = duration;
+            OnWebsiteUsageUpdated?.Invoke(website, duration);
         }
 
         private ActiveWindowInfo GetActiveWindowInfo()
@@ -172,19 +176,17 @@ namespace Mauixui.Services
                 if (hwnd == IntPtr.Zero)
                     return new ActiveWindowInfo { WindowTitle = "Unknown", ProcessName = "Unknown" };
 
-                System.Text.StringBuilder sb = new System.Text.StringBuilder(512);
+                var sb = new System.Text.StringBuilder(512);
                 GetWindowText(hwnd, sb, 512);
-                string windowTitle = sb.ToString();
 
-                GetWindowThreadProcessId(hwnd, out uint processId);
-                Process process = Process.GetProcessById((int)processId);
-                string processName = process.ProcessName;
+                GetWindowThreadProcessId(hwnd, out uint pid);
+                var process = Process.GetProcessById((int)pid);
 
                 return new ActiveWindowInfo
                 {
-                    WindowTitle = windowTitle,
-                    ProcessName = processName,
-                    ProcessId = processId
+                    WindowTitle = sb.ToString(),
+                    ProcessName = process.ProcessName,
+                    ProcessId = pid
                 };
             }
             catch
@@ -193,9 +195,10 @@ namespace Mauixui.Services
             }
         }
 
+        // --- Friendly Names ---
         private string GetFriendlyAppName(string processName)
         {
-            var friendlyNames = new Dictionary<string, string>
+            var names = new Dictionary<string, string>
             {
                 {"chrome", "Google Chrome"},
                 {"msedge", "Microsoft Edge"},
@@ -211,132 +214,54 @@ namespace Mauixui.Services
                 {"telegram", "Telegram"},
                 {"discord", "Discord"},
                 {"whatsapp", "WhatsApp"},
-                {"slack", "Slack"},
-                {"outlook", "Outlook"},
-                {"teams", "Microsoft Teams"}
+                {"slack", "Slack"}
             };
 
-            return friendlyNames.ContainsKey(processName.ToLower())
-                ? friendlyNames[processName.ToLower()]
-                : processName;
+            var key = processName.ToLower();
+            return names.ContainsKey(key) ? names[key] : processName;
         }
 
+        // --- Website Parsing ---
         private bool IsBrowser(string processName)
         {
-            var browsers = new[] { "chrome", "firefox", "msedge", "opera", "safari", "browser" };
-            return browsers.Any(browser => processName.ToLower().Contains(browser));
+            string p = processName.ToLower();
+            return p.Contains("chrome") || p.Contains("firefox") ||
+                   p.Contains("edge") || p.Contains("opera");
         }
 
         private string ExtractWebsiteFromTitle(string title)
         {
             if (string.IsNullOrEmpty(title)) return "Unknown";
 
-            var patterns = new[] { " - ", " | ", " — ", " • " };
+            string[] patterns = { " - ", " | ", " — ", " • " };
 
             foreach (var pattern in patterns)
             {
                 if (title.Contains(pattern))
                 {
                     var parts = title.Split(new[] { pattern }, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1)
-                    {
-                        var domain = parts.Last().Trim();
-                        if (domain.EndsWith(" - Google Chrome"))
-                            domain = domain.Replace(" - Google Chrome", "");
-                        if (domain.EndsWith(" - Microsoft Edge"))
-                            domain = domain.Replace(" - Microsoft Edge", "");
-                        return domain;
-                    }
+                    return parts.Last().Trim();
                 }
             }
 
             return title.Length > 40 ? title.Substring(0, 40) + "..." : title;
         }
 
-        private string CategorizeActivity(string processName, string windowTitle)
-        {
-            var lowerProcess = processName.ToLower();
-            var lowerTitle = windowTitle.ToLower();
+        // Категоризация приложений и сайтов (оставил как у тебя)
+        private string CategorizeActivity(string processName, string windowTitle) { var lowerProcess = processName.ToLower(); var lowerTitle = windowTitle.ToLower(); if (IsBrowser(lowerProcess)) return "Браузер"; if (lowerProcess.Contains("devenv") || lowerProcess.Contains("code") || lowerTitle.Contains("visual studio")) return "Разработка"; if (lowerProcess.Contains("word") || lowerProcess.Contains("excel") || lowerProcess.Contains("powerpoint") || lowerTitle.Contains("word") || lowerTitle.Contains("excel")) return "Офис"; if (lowerProcess.Contains("notepad") || lowerProcess.Contains("wordpad")) return "Текст"; if (lowerProcess.Contains("explorer")) return "Система"; if (lowerProcess.Contains("telegram") || lowerProcess.Contains("discord") || lowerProcess.Contains("whatsapp") || lowerProcess.Contains("slack")) return "Мессенджер"; if (lowerProcess.Contains("spotify") || lowerProcess.Contains("music") || lowerProcess.Contains("youtube.com")) return "Музыка/Видео"; if (lowerProcess.Contains("game") || lowerProcess.Contains("steam")) return "Игры"; if (lowerTitle.Contains("почта") || lowerTitle.Contains("mail") || lowerTitle.Contains("gmail") || lowerProcess.Contains("outlook")) return "Почта"; return "Другое"; }
+        private string CategorizeWebsite(string website) { var lowerWebsite = website.ToLower(); if (lowerWebsite.Contains("youtube") || lowerWebsite.Contains("twitch") || lowerWebsite.Contains("netflix")) return "Видео"; if (lowerWebsite.Contains("github") || lowerWebsite.Contains("stackoverflow") || lowerWebsite.Contains("gitlab")) return "Разработка"; if (lowerWebsite.Contains("facebook") || lowerWebsite.Contains("instagram") || lowerWebsite.Contains("vk") || lowerWebsite.Contains("twitter")) return "Соцсети"; if (lowerWebsite.Contains("mail") || lowerWebsite.Contains("gmail") || lowerWebsite.Contains("outlook")) return "Почта"; if (lowerWebsite.Contains("google") || lowerWebsite.Contains("yandex") || lowerWebsite.Contains("bing")) return "Поиск"; if (lowerWebsite.Contains("amazon") || lowerWebsite.Contains("aliexpress") || lowerWebsite.Contains("wildberries")) return "Шопинг"; if (lowerWebsite.Contains("reddit") || lowerWebsite.Contains("habr") || lowerWebsite.Contains("medium")) return "Блоги/Форумы"; return "Другое"; }
 
-            if (IsBrowser(lowerProcess)) return "Браузер";
-            if (lowerProcess.Contains("devenv") || lowerProcess.Contains("code") || lowerTitle.Contains("visual studio"))
-                return "Разработка";
-            if (lowerProcess.Contains("word") || lowerProcess.Contains("excel") || lowerProcess.Contains("powerpoint") || lowerTitle.Contains("word") || lowerTitle.Contains("excel"))
-                return "Офис";
-            if (lowerProcess.Contains("notepad") || lowerProcess.Contains("wordpad")) return "Текст";
-            if (lowerProcess.Contains("explorer")) return "Система";
-            if (lowerProcess.Contains("telegram") || lowerProcess.Contains("discord") || lowerProcess.Contains("whatsapp") || lowerProcess.Contains("slack"))
-                return "Мессенджер";
-            if (lowerProcess.Contains("spotify") || lowerProcess.Contains("music") || lowerProcess.Contains("youtube.com"))
-                return "Музыка/Видео";
-            if (lowerProcess.Contains("game") || lowerProcess.Contains("steam")) return "Игры";
-            if (lowerTitle.Contains("почта") || lowerTitle.Contains("mail") || lowerTitle.Contains("gmail") || lowerProcess.Contains("outlook"))
-                return "Почта";
-
-            return "Другое";
-        }
-
-        private string CategorizeWebsite(string website)
-        {
-            var lowerWebsite = website.ToLower();
-
-            if (lowerWebsite.Contains("youtube") || lowerWebsite.Contains("twitch") || lowerWebsite.Contains("netflix"))
-                return "Видео";
-            if (lowerWebsite.Contains("github") || lowerWebsite.Contains("stackoverflow") || lowerWebsite.Contains("gitlab"))
-                return "Разработка";
-            if (lowerWebsite.Contains("facebook") || lowerWebsite.Contains("instagram") || lowerWebsite.Contains("vk") || lowerWebsite.Contains("twitter"))
-                return "Соцсети";
-            if (lowerWebsite.Contains("mail") || lowerWebsite.Contains("gmail") || lowerWebsite.Contains("outlook"))
-                return "Почта";
-            if (lowerWebsite.Contains("google") || lowerWebsite.Contains("yandex") || lowerWebsite.Contains("bing"))
-                return "Поиск";
-            if (lowerWebsite.Contains("amazon") || lowerWebsite.Contains("aliexpress") || lowerWebsite.Contains("wildberries"))
-                return "Шопинг";
-            if (lowerWebsite.Contains("reddit") || lowerWebsite.Contains("habr") || lowerWebsite.Contains("medium"))
-                return "Блоги/Форумы";
-
-            return "Другое";
-        }
-
-        // Методы для получения статистики
+        // --- Статистика ---
         public List<AppUsageRecord> GetTodayAppUsage()
         {
             var today = DateTime.Today;
-            return _sessionRecords
-                .Where(r => r.StartTime.Date == today)
-                .OrderByDescending(r => r.StartTime)
-                .ToList();
+            return _sessionRecords.Where(r => r.StartTime.Date == today).ToList();
         }
 
         public List<WebsiteUsageRecord> GetTodayWebsiteUsage()
         {
             var today = DateTime.Today;
-            return _websiteRecords
-                .Where(r => r.StartTime.Date == today)
-                .OrderByDescending(r => r.StartTime)
-                .ToList();
-        }
-
-        public TimeSpan GetTotalUsageToday()
-        {
-            var todayRecords = GetTodayAppUsage();
-            return TimeSpan.FromSeconds(todayRecords.Sum(r => r.Duration.TotalSeconds));
-        }
-
-        public Dictionary<string, TimeSpan> GetAppUsageByCategory()
-        {
-            var todayRecords = GetTodayAppUsage();
-            return todayRecords
-                .GroupBy(r => r.Category)
-                .ToDictionary(g => g.Key, g => TimeSpan.FromSeconds(g.Sum(r => r.Duration.TotalSeconds)));
-        }
-
-        public Dictionary<string, TimeSpan> GetWebsiteUsageByCategory()
-        {
-            var todayRecords = GetTodayWebsiteUsage();
-            return todayRecords
-                .GroupBy(r => r.Category)
-                .ToDictionary(g => g.Key, g => TimeSpan.FromSeconds(g.Sum(r => r.Duration.TotalSeconds)));
+            return _websiteRecords.Where(r => r.StartTime.Date == today).ToList();
         }
 
         public bool IsTracking => _isTracking;

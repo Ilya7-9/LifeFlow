@@ -6,22 +6,22 @@
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="15">
 
-            <Label Text="Трекер активности Windows" 
-                   FontSize="24" 
-                   FontAttributes="Bold" 
+            <Label Text="Трекер активности Windows"
+                   FontSize="24"
+                   FontAttributes="Bold"
                    TextColor="White"
                    HorizontalOptions="Center"/>
 
             <!-- Статус -->
             <Frame BackgroundColor="#2D2D30" CornerRadius="10" Padding="15">
                 <VerticalStackLayout>
-                    <Label x:Name="StatusLabel" 
-                           Text="Трекер запускается..." 
-                           TextColor="#23D160" 
+                    <Label x:Name="StatusLabel"
+                           Text="Трекер запускается..."
+                           TextColor="#23D160"
                            FontSize="14"
                            FontAttributes="Bold"/>
-                    <Label Text="Отслеживает активные приложения и веб-сайты" 
-                           TextColor="#888888" 
+                    <Label Text="Отслеживает активные приложения и веб-сайты"
+                           TextColor="#888888"
                            FontSize="12"/>
                 </VerticalStackLayout>
             </Frame>
@@ -46,19 +46,25 @@
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Управление трекером" TextColor="White" FontAttributes="Bold"/>
                     <HorizontalStackLayout Spacing="10">
-                        <Button Text="▶️ Запустить" 
-                                Clicked="OnStartTrackingClicked" 
+                        <Button Text="▶️ Запустить"
+                                Clicked="OnStartTrackingClicked"
                                 BackgroundColor="#23D160"
                                 TextColor="White"
                                 CornerRadius="8"/>
-                        <Button Text="⏹️ Остановить" 
-                                Clicked="OnStopTrackingClicked" 
+                        <Button Text="⏹️ Остановить"
+                                Clicked="OnStopTrackingClicked"
                                 BackgroundColor="#FF4444"
                                 TextColor="White"
                                 CornerRadius="8"/>
-                        <Button Text="📊 Статистика" 
-                                Clicked="OnShowStatsClicked" 
+                        <Button Text="📊 Статистика"
+                                Clicked="OnShowStatsClicked"
                                 BackgroundColor="#007ACC"
+                                TextColor="White"
+                                CornerRadius="8"/>
+                        <!-- новая кнопка для сохранения снимка -->
+                        <Button Text="💾 Сохранить снимок"
+                                Clicked="OnSaveSnapshotClicked"
+                                BackgroundColor="#6A8AF0"
                                 TextColor="White"
                                 CornerRadius="8"/>
                     </HorizontalStackLayout>
@@ -68,45 +74,74 @@
             <!-- Топ приложений -->
             <Frame BackgroundColor="#2D2D30" CornerRadius="10" Padding="15">
                 <VerticalStackLayout>
-                    <Label Text="🏆 Топ приложений сегодня" 
-                           TextColor="White" 
+                    <Label Text="🏆 Топ приложений сегодня"
+                           TextColor="White"
                            FontAttributes="Bold"
                            FontSize="16"/>
                     <VerticalStackLayout x:Name="TopAppsStack" Spacing="5" Margin="0,10,0,0">
-                        <Label Text="Данные появятся здесь..." 
-                               TextColor="#888888" 
+                        <Label Text="Данные появятся здесь..."
+                               TextColor="#888888"
                                FontSize="12"/>
                     </VerticalStackLayout>
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Добавьте этот Frame после основный статистики -->
+            <!-- Текущая активность -->
             <Frame BackgroundColor="#2D2D30" CornerRadius="10" Padding="15">
                 <VerticalStackLayout>
-                    <Label Text="🎯 Текущая активность" 
-               TextColor="White" 
-               FontAttributes="Bold"
-               FontSize="16"/>
-                    <Label x:Name="CurrentActivityLabel" 
-               Text="Активность появится здесь..." 
-               TextColor="#23D160" 
-               FontSize="14"
-               Margin="0,10,0,0"/>
+                    <Label Text="🎯 Текущая активность"
+                           TextColor="White"
+                           FontAttributes="Bold"
+                           FontSize="16"/>
+                    <Label x:Name="CurrentActivityLabel"
+                           Text="Активность появится здесь..."
+                           TextColor="#23D160"
+                           FontSize="14"
+                           Margin="0,10,0,0"/>
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- И этот Frame для топ сайтов -->
+            <!-- Топ сайтов -->
             <Frame BackgroundColor="#2D2D30" CornerRadius="10" Padding="15">
                 <VerticalStackLayout>
-                    <Label Text="🌐 Топ сайтов сегодня" 
-               TextColor="White" 
-               FontAttributes="Bold"
-               FontSize="16"/>
+                    <Label Text="🌐 Топ сайтов сегодня"
+                           TextColor="White"
+                           FontAttributes="Bold"
+                           FontSize="16"/>
                     <VerticalStackLayout x:Name="TopWebsitesStack" Spacing="5" Margin="0,10,0,0">
-                        <Label Text="Данные появятся здесь..." 
-                   TextColor="#888888" 
-                   FontSize="12"/>
+                        <Label Text="Данные появятся здесь..."
+                               TextColor="#888888"
+                               FontSize="12"/>
                     </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- ==== НОВЫЙ БЛОК: ИСТОРИЯ ЗА 7 ДНЕЙ ==== -->
+            <Frame BackgroundColor="#1F2933" CornerRadius="10" Padding="12">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="📅 История за 7 дней" TextColor="White" FontAttributes="Bold" FontSize="16"/>
+
+                    <!-- Горизонтальный график -->
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout x:Name="WeekBarsPanel" Spacing="8" Padding="6"/>
+                    </ScrollView>
+
+                    <!-- Список дней / детали -->
+                    <CollectionView x:Name="HistoryList" SelectionMode="Single" SelectionChanged="OnHistorySelectionChanged">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame BackgroundColor="#2D2D30" CornerRadius="8" Padding="10" Margin="0,6,0,0">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+                                        <Label Text="{Binding DateText}" TextColor="White" FontAttributes="Bold" Grid.Row="0" Grid.Column="0" />
+                                        <Label Text="{Binding TotalTimeText}" TextColor="#CCCCCC" Grid.Row="0" Grid.Column="1" HorizontalTextAlignment="End"/>
+                                        <Button Text="Экспорт CSV" Command="{Binding Source={x:Reference Name=TrackerViewRoot}, Path=BindingContext.ExportDayCommand}" CommandParameter="{Binding .}" Grid.Row="0" Grid.Column="2" HorizontalOptions="End" BackgroundColor="#2C7BFF" TextColor="White" CornerRadius="6" Padding="6,2"/>
+                                        <Label Text="{Binding TopSummary}" TextColor="#888888" FontSize="12" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"/>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
                 </VerticalStackLayout>
             </Frame>
 
@@ -114,13 +149,13 @@
             <Frame BackgroundColor="#1E1E1E" CornerRadius="10" Padding="15">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="ℹ️ Как это работает?" TextColor="White" FontAttributes="Bold"/>
-                    <Label Text="• Отслеживает активное окно каждую секунду" 
+                    <Label Text="• Отслеживает активное окно каждую секунду"
                            TextColor="#888888" FontSize="12"/>
-                    <Label Text="• Определяет приложения и сайты в браузерах" 
+                    <Label Text="• Определяет приложения и сайты в браузерах"
                            TextColor="#888888" FontSize="12"/>
-                    <Label Text="• Автоматически категоризирует активность" 
+                    <Label Text="• Автоматически категоризирует активность"
                            TextColor="#888888" FontSize="12"/>
-                    <Label Text="• Работает только в фоновом режиме" 
+                    <Label Text="• Работает только в фоновом режиме"
                            TextColor="#888888" FontSize="12"/>
                 </VerticalStackLayout>
             </Frame>

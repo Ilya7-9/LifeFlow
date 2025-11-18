@@ -8,8 +8,14 @@ namespace Mauixui.Services
 {
     public static class TrackerService
     {
+        // Живое время (каждая секунда увеличивается)
+        public static TimeSpan LiveTotalTime = TimeSpan.Zero;
+
         private static WindowsActivityTracker _tracker;
         private static bool _isInitialized = false;
+
+        // Блокировка, чтобы избежать гонок
+        private static readonly object _lock = new object();
 
         public static WindowsActivityTracker Tracker
         {
@@ -18,35 +24,48 @@ namespace Mauixui.Services
                 if (!_isInitialized)
                 {
                     _tracker = new WindowsActivityTracker();
+                    _tracker.OnTick += OnTrackerTick;   // ВАЖНО: таймер реального времени
                     _isInitialized = true;
                 }
                 return _tracker;
             }
         }
 
+        /// <summary>
+        /// Запускает трекер, если он ещё не запущен.
+        /// </summary>
         public static void EnsureStarted()
         {
-            // Гарантируем, что трекер запущен
             var tracker = Tracker;
             if (!tracker.IsTracking)
-            {
                 tracker.StartTracking();
+        }
+
+        // 🔥 Обновляется каждую секунду из внутреннего таймера WindowsActivityTracker
+        private static void OnTrackerTick()
+        {
+            lock (_lock)
+            {
+                LiveTotalTime += TimeSpan.FromSeconds(1);
             }
         }
 
-        // ИСПРАВЛЕННЫЙ МЕТОД - добавлен static
+        // ---------------------------
+        // ВРЕМЯ (сумма всей дневной активности)
+        // ---------------------------
+
         public static async Task<TimeSpan> GetTotalTrackedTimeAsync()
         {
             try
             {
-                // Используем существующий трекер для получения времени
-                var todayAppUsage = GetTodayAppUsage();
-                var todayWebsiteUsage = GetTodayWebsiteUsage();
+                var todayApps = GetTodayAppUsage();
+                var todaySites = GetTodayWebsiteUsage();
 
-                var totalSeconds = todayAppUsage.Sum(r => r.Duration.TotalSeconds) +
-                                 todayWebsiteUsage.Sum(r => r.Duration.TotalSeconds);
+                double total =
+                    todayApps.Sum(r => r.Duration.TotalSeconds) +
+                    todaySites.Sum(r => r.Duration.TotalSeconds);
 
-                return TimeSpan.FromSeconds(totalSeconds);
+                return TimeSpan.FromSeconds(total);
             }
             catch (Exception ex)
             {
@@ -55,18 +74,18 @@ namespace Mauixui.Services
             }
         }
 
-        // ДОБАВИМ СИНХРОННУЮ ВЕРСИЮ
         public static TimeSpan GetTotalTrackedTime()
         {
             try
             {
-                var todayAppUsage = GetTodayAppUsage();
-                var todayWebsiteUsage = GetTodayWebsiteUsage();
+                var todayApps = GetTodayAppUsage();
+                var todaySites = GetTodayWebsiteUsage();
 
-                var totalSeconds = todayAppUsage.Sum(r => r.Duration.TotalSeconds) +
-                                 todayWebsiteUsage.Sum(r => r.Duration.TotalSeconds);
+                double total =
+                    todayApps.Sum(r => r.Duration.TotalSeconds) +
+                    todaySites.Sum(r => r.Duration.TotalSeconds);
 
-                return TimeSpan.FromSeconds(totalSeconds);
+                return TimeSpan.FromSeconds(total);
             }
             catch (Exception ex)
             {
@@ -74,6 +93,10 @@ namespace Mauixui.Services
                 return TimeSpan.Zero;
             }
         }
+
+        // ---------------------------
+        // ЗАПИСИ ЗА СЕГОДНЯ
+        // ---------------------------
 
         public static List<AppUsageRecord> GetTodayAppUsage()
         {
@@ -85,15 +108,22 @@ namespace Mauixui.Services
             return Tracker.GetTodayWebsiteUsage();
         }
 
-        // ДОБАВИМ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ТЕКУЩЕЙ АКТИВНОСТИ
+        // ---------------------------
+        // ТЕКУЩАЯ АКТИВНОСТЬ (LIVE)
+        // ---------------------------
+
         public static (string app, TimeSpan time) GetCurrentAppActivity()
         {
             try
             {
-                var currentAppTimes = Tracker.CurrentAppTimes;
-                var currentApp = currentAppTimes.OrderByDescending(x => x.Value).FirstOrDefault();
+                var dict = Tracker.CurrentAppTimes;
 
-                return (currentApp.Key ?? "Неизвестно", currentApp.Value);
+                if (dict.Count == 0)
+                    return ("Неизвестно", TimeSpan.Zero);
+
+                var pair = dict.OrderByDescending(x => x.Value).First();
+
+                return (pair.Key ?? "Неизвестно", pair.Value);
             }
             catch (Exception ex)
             {
@@ -102,15 +132,18 @@ namespace Mauixui.Services
             }
         }
 
-        // ДОБАВИМ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ТЕКУЩЕГО САЙТА
         public static (string website, TimeSpan time) GetCurrentWebsiteActivity()
         {
             try
             {
-                var currentWebsiteTimes = Tracker.CurrentWebsiteTimes;
-                var currentWebsite = currentWebsiteTimes.OrderByDescending(x => x.Value).FirstOrDefault();
+                var dict = Tracker.CurrentWebsiteTimes;
 
-                return (currentWebsite.Key ?? "Неизвестно", currentWebsite.Value);
+                if (dict.Count == 0)
+                    return ("Неизвестно", TimeSpan.Zero);
+
+                var pair = dict.OrderByDescending(x => x.Value).First();
+
+                return (pair.Key ?? "Неизвестно", pair.Value);
             }
             catch (Exception ex)
             {
