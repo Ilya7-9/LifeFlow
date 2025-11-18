@@ -4,36 +4,77 @@
              x:Class="Mauixui.Views.CategoriesView"
              BackgroundColor="#1E1E1E">
 
-    <VerticalStackLayout Padding="20" Spacing="15">
-        <Label Text="📁 Категории"
-               FontSize="24"
-               FontAttributes="Bold"
-               TextColor="White"/>
+    <Grid ColumnSpacing="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+    
+        <VerticalStackLayout Padding="20" Spacing="15" Grid.Column="0">
+            <Label Text="📁 Категории"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   TextColor="White"/>
 
 
-        <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12">
-            <HorizontalStackLayout Spacing="10">
-                <Entry x:Name="CategoryEntry"
-                       Placeholder="Название категории"
-                       BackgroundColor="#40444B"
-                       PlaceholderColor="#888888"
-                       TextColor="White"
-                       WidthRequest="200"/>
-                <Picker x:Name="TypePicker" WidthRequest="120">
-                    <Picker.Items>
-                        <x:String>Доход</x:String>
-                        <x:String>Расход</x:String>
-                    </Picker.Items>
-                </Picker>
-                <Button Text="➕"
-                        BackgroundColor="#4CAF50"
-                        TextColor="White"
-                        Clicked="AddCategory"/>
-            </HorizontalStackLayout>
-        </Frame>
+            <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12">
+                <HorizontalStackLayout Spacing="10">
+                    <Entry x:Name="CategoryEntry"
+                           Placeholder="Название категории"
+                           BackgroundColor="#40444B"
+                           PlaceholderColor="#888888"
+                           TextColor="White"
+                           WidthRequest="200"/>
+                    <Picker x:Name="TypePicker" WidthRequest="120">
+                        <Picker.Items>
+                            <x:String>Доход</x:String>
+                            <x:String>Расход</x:String>
+                        </Picker.Items>
+                    </Picker>
+                    <Button Text="➕"
+                            BackgroundColor="#4CAF50"
+                            TextColor="White"
+                            Clicked="AddCategory"/>
+                </HorizontalStackLayout>
+            </Frame>
 
-        <ScrollView>
-            <VerticalStackLayout x:Name="CategoryList" Spacing="8"/>
-        </ScrollView>
-    </VerticalStackLayout>
+            <ScrollView>
+                <VerticalStackLayout x:Name="CategoryList" Spacing="8"/>
+            </ScrollView>
+        </VerticalStackLayout>
+    
+        <VerticalStackLayout Grid.Column="1">
+            <Label Text="Бюджеты" FontSize="26" TextColor="White" />
+
+            <Button 
+            Text="Добавить бюджет"
+            Clicked="AddBudgetClicked"
+            BackgroundColor="#40444B"
+            TextColor="White"
+            CornerRadius="12"/>
+
+            <CollectionView x:Name="BudgetsList" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame BackgroundColor="#2D2D30" CornerRadius="12" Padding="12" Margin="0,5">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Category}" TextColor="White" FontSize="18"/>
+                                <Label Text="{Binding Limit, StringFormat='Лимит: {0} ₽'}" TextColor="LightGray"/>
+                                <Label Text="{Binding Spent, StringFormat='Потрачено: {0} ₽'}" TextColor="LightGray"/>
+
+                                <Button 
+                                Text="Удалить"
+                                Clicked="DeleteBudgetClicked"
+                                BackgroundColor="#8B0000"
+                                TextColor="White"
+                                CornerRadius="10"
+                                Margin="0,5,0,0"
+                                CommandParameter="{Binding}"/>
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </Grid>
 </ContentView>
