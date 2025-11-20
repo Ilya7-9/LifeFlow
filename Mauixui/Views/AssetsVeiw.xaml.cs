@@ -73,7 +73,7 @@ namespace Mauixui.Views
 
                 stack.Children.Add(new Label { Text = a.Name, TextColor = Color.FromArgb("#FFFFFF"), FontSize = 16, FontAttributes = FontAttributes.Bold });
                 stack.Children.Add(new Label { Text = $"{a.Category} • {a.DateAcquired:dd.MM.yyyy}", TextColor = Color.FromArgb("#BBBBBB"), FontSize = 12 });
-                stack.Children.Add(new Label { Text = $"{a.Value:F2} ₽", TextColor = Color.FromArgb("#23D160"), FontSize = 14 });
+                stack.Children.Add(new Label { Text = $"{a.Value:F2} Br", TextColor = Color.FromArgb("#23D160"), FontSize = 14 });
 
                 var h = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.End };
                 var editBtn = new Button { Text = "Изм.", BackgroundColor = Color.FromArgb("#40444B"), TextColor = Color.FromArgb("#FFFFFF"), CornerRadius = 8, CommandParameter = a };
@@ -115,7 +115,7 @@ namespace Mauixui.Views
                 });
 
                 stack.Children.Add(new Label { Text = $"{d.Party} • {d.Type}", TextColor = Color.FromArgb("#FFFFFF"), FontSize = 15, FontAttributes = FontAttributes.Bold });
-                stack.Children.Add(new Label { Text = $"Сумма: {d.Amount:F2} ₽  •  Срок: {d.DueDate:dd.MM.yyyy}", TextColor = Color.FromArgb("#BBBBBB"), FontSize = 12 });
+                stack.Children.Add(new Label { Text = $"Сумма: {d.Amount:F2} Br  •  Срок: {d.DueDate:dd.MM.yyyy}", TextColor = Color.FromArgb("#BBBBBB"), FontSize = 12 });
                 if (d.InterestPercent > 0)
                     stack.Children.Add(new Label { Text = $"Процент: {d.InterestPercent:F2} %", TextColor = Color.FromArgb("#BBBBBB"), FontSize = 12 });
 
@@ -150,9 +150,9 @@ namespace Mauixui.Views
             decimal net = (totalAssets + totalReceivables) - totalDebts;
 
 
-            TotalDebtsLabel.Text = $"{totalDebts:F2} ₽";
-            TotalAssetsLabel.Text = $"{totalAssets + totalReceivables:F2} ₽";
-            NetWorthLabel.Text = $"{net:F2} ₽";
+            TotalDebtsLabel.Text = $"{totalDebts:F2} Br";
+            TotalAssetsLabel.Text = $"{totalAssets + totalReceivables:F2} Br";
+            NetWorthLabel.Text = $"{net:F2} Br";
 
 
             // Цвет чистого капитала

@@ -13,17 +13,17 @@
             <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
                 <VerticalStackLayout>
                     <Label Text="Общие активы" TextColor="#BBBBBB" FontSize="12"/>
-                    <Label x:Name="TotalAssetsLabel" Text="0 ₽" FontSize="18" TextColor="#23D160" FontAttributes="Bold"/>
+                    <Label x:Name="TotalAssetsLabel" Text="0 Br" FontSize="18" TextColor="#23D160" FontAttributes="Bold"/>
                 </VerticalStackLayout>
 
                 <VerticalStackLayout>
                     <Label Text="Общие долги" TextColor="#BBBBBB" FontSize="12"/>
-                    <Label x:Name="TotalDebtsLabel" Text="0 ₽" FontSize="18" TextColor="#FF4B4B" FontAttributes="Bold"/>
+                    <Label x:Name="TotalDebtsLabel" Text="0 Br" FontSize="18" TextColor="#FF4B4B" FontAttributes="Bold"/>
                 </VerticalStackLayout>
 
                 <VerticalStackLayout>
                     <Label Text="Чистый капитал" TextColor="#BBBBBB" FontSize="12"/>
-                    <Label x:Name="NetWorthLabel" Text="0 ₽" FontSize="18" TextColor="White" FontAttributes="Bold"/>
+                    <Label x:Name="NetWorthLabel" Text="0 Br" FontSize="18" TextColor="White" FontAttributes="Bold"/>
                 </VerticalStackLayout>
             </HorizontalStackLayout>
         </Frame>
@@ -65,7 +65,7 @@
                 <Entry x:Name="NameEntry" Placeholder="Название (например: Карта Тинькофф)" 
                        BackgroundColor="#40444B" TextColor="White" PlaceholderColor="#888888"/>
 
-                <Entry x:Name="ValueEntry" Placeholder="Сумма ₽" Keyboard="Numeric"
+                <Entry x:Name="ValueEntry" Placeholder="Сумма Br" Keyboard="Numeric"
                        BackgroundColor="#40444B" TextColor="White" PlaceholderColor="#888888"/>
 
                 <HorizontalStackLayout Spacing="8">

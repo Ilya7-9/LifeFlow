@@ -12,7 +12,7 @@
             <VerticalStackLayout Spacing="15">
 
                 <Label Text="💰 Финансы" FontSize="26" TextColor="White" FontAttributes="Bold"/>
-                <Label x:Name="BalanceLabel" Text="Баланс: 0 ₽" FontSize="20" TextColor="#23D160"/>
+                <Label x:Name="BalanceLabel" Text="Баланс: 0 Br" FontSize="20" TextColor="#23D160"/>
 
                 <HorizontalStackLayout Spacing="10">
                     <Button Text="📁 Категории" BackgroundColor="#40444B" TextColor="White" Clicked="OpenCategories"/>
@@ -69,8 +69,13 @@
 
             <VerticalStackLayout>
 
-                <Button Text="← Назад" BackgroundColor="#40444B" TextColor="White"
-                        Margin="10" Clicked="GoBackToFinance"/>
+                <Button Text="← Назад" 
+                        BackgroundColor="#40444B" 
+                        TextColor="White"
+                        Margin="10" 
+                        Clicked="GoBackToFinance" 
+                        WidthRequest="100"
+                        HorizontalOptions="Start"/>
 
                 <ContentView x:Name="InnerViewContent"/>
             </VerticalStackLayout>

@@ -12,6 +12,7 @@ namespace Mauixui.Views
         private List<CategoryItem> _categories = new();
         private CategoryDatabase _db;
         private string _profileId;
+        private CategoryItem _selectedCategory;
 
         private readonly BudgetDatabase _budgetDb;
         private readonly FinanceDatabase _financeDb;
@@ -28,42 +29,70 @@ namespace Mauixui.Views
             _profileId = ps.GetCurrentProfile().Id;
             _db = ps.GetCategoryDatabase(_profileId);
 
-            LoadCategories();
-
             _budgetDb = ps.GetBudgetDatabase(_profileId);
             _financeDb = ps.GetFinanceDatabase(_profileId);
             _categoryDb = ps.GetCategoryDatabase(_profileId);
 
-            LoadBudgets();
+            _ = LoadDataAsync();
         }
 
-        private async void LoadCategories()
+        private async Task LoadDataAsync()
+        {
+            await LoadBudgetsAndTransactionsAsync();
+            await LoadCategoriesAsync();
+        }
+
+        private async Task LoadCategoriesAsync()
         {
             _categories = await _db.GetCategoriesAsync(_profileId);
             RenderCategories();
         }
 
-        private async void AddCategory(object sender, EventArgs e)
+        private async Task LoadBudgetsAndTransactionsAsync()
         {
-            if (string.IsNullOrWhiteSpace(CategoryEntry.Text) || TypePicker.SelectedIndex == -1)
-                return;
+            _budgets = await _budgetDb.GetBudgetsAsync(_profileId);
+            _transactions = await _financeDb.GetItemsAsync(_profileId);
 
-            var item = new CategoryItem
+            // Автоматический пересчёт потраченной суммы для бюджетов
+            foreach (var budget in _budgets)
             {
-                ProfileId = _profileId,
-                Name = CategoryEntry.Text,
-                Type = TypePicker.SelectedItem.ToString()
-            };
+                budget.Spent = (double)_transactions
+                    .Where(t => t.Type == "Расход" && t.Category == budget.Category)
+                    .Sum(t => t.Amount);
 
-            await _db.SaveCategoryAsync(item);
-            CategoryEntry.Text = "";
-            TypePicker.SelectedIndex = -1;
-            LoadCategories();
+                // Обновляем бюджет в базе
+                await _budgetDb.SaveBudgetAsync(budget);
+            }
         }
 
         private void RenderCategories()
         {
             CategoryList.Children.Clear();
+
+            // Кнопка добавления новой категории
+            var addButtonFrame = new Frame
+            {
+                BackgroundColor = Color.FromArgb("#2D2D30"),
+                CornerRadius = 12,
+                Padding = 10,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            var addButton = new Button
+            {
+                Text = "+ Добавить категорию",
+                BackgroundColor = Color.FromArgb("#5865F2"),
+                TextColor = Color.FromArgb("#fff"),
+                FontSize = 14,
+                FontAttributes = FontAttributes.Bold,
+                HeightRequest = 40,
+                CornerRadius = 8
+            };
+            addButton.Clicked += ShowCreatePanel;
+
+            addButtonFrame.Content = addButton;
+            CategoryList.Children.Add(addButtonFrame);
+
             if (!_categories.Any())
             {
                 CategoryList.Children.Add(new Label
@@ -77,79 +106,247 @@ namespace Mauixui.Views
 
             foreach (var cat in _categories)
             {
+                // Получаем бюджет для этой категории
+                var categoryBudget = _budgets.FirstOrDefault(b => b.Category == cat.Name);
+                var hasBudget = categoryBudget != null;
+
                 var frame = new Frame
                 {
-                    BackgroundColor = Color.FromArgb("#40444B"),
+                    BackgroundColor = (_selectedCategory == cat) ? Color.FromArgb("#5A5F6B") : Color.FromArgb("#40444B"),
                     CornerRadius = 12,
                     Padding = 10,
-                    Content = new Label
+                    Content = new VerticalStackLayout
                     {
-                        Text = $"{cat.Name} ({cat.Type})",
-                        TextColor = Color.FromArgb("#FFFFFF"),
-                        FontSize = 14
+                        Spacing = 5,
+                        Children =
+                        {
+                            new Label
+                            {
+                                Text = $"{cat.Name} ({cat.Type})",
+                                TextColor = Color.FromArgb("#FFFFFF"),
+                                FontSize = 14,
+                                FontAttributes = hasBudget ? FontAttributes.Bold : FontAttributes.None
+                            },
+                            hasBudget ? new Label
+                            {
+                                Text = $"Бюджет: {categoryBudget.Limit:C}",
+                                TextColor = Color.FromArgb("#57F287"),
+                                FontSize = 12
+                            } : null
+                        }
                     }
                 };
+
+                var tapGesture = new TapGestureRecognizer();
+                tapGesture.Tapped += async (s, e) =>
+                {
+                    await frame.ScaleTo(0.95, 100, Easing.CubicInOut);
+                    await frame.ScaleTo(1.0, 100, Easing.CubicInOut);
+                    SelectCategory(cat);
+                };
+                frame.GestureRecognizers.Add(tapGesture);
+
                 CategoryList.Children.Add(frame);
             }
         }
 
-        private async void LoadBudgets()
+        private void SelectCategory(CategoryItem cat)
         {
-            _budgets = await _budgetDb.GetBudgetsAsync(_profileId);
-            _transactions = await _financeDb.GetItemsAsync(_profileId);
-            _categories = await _categoryDb.GetCategoriesAsync(_profileId);
+            _selectedCategory = cat;
+            ShowEditPanel();
 
-            // Автоматический пересчёт потраченной суммы
-            foreach (var b in _budgets)
+            // Заполняем поля данными выбранной категории
+            CategoryEntry.Text = cat.Name;
+            TypePicker.SelectedItem = cat.Type;
+
+            // Загружаем информацию о бюджете
+            LoadBudgetInfo(cat);
+        }
+
+        private void LoadBudgetInfo(CategoryItem cat)
+        {
+            var categoryBudget = _budgets.FirstOrDefault(b => b.Category == cat.Name);
+
+            if (categoryBudget != null)
             {
-                b.Spent = (double)_transactions
-                    .Where(t => t.Type == "Расход" && t.Category == b.Category)
-                    .Sum(t => t.Amount);
+                BudgetEntry.Text = categoryBudget.Limit.ToString("F2");
+                BudgetInfoFrame.IsVisible = true;
+
+                var remaining = categoryBudget.Limit - categoryBudget.Spent;
+                var progress = categoryBudget.Limit > 0 ? (categoryBudget.Spent / categoryBudget.Limit) * 100 : 0;
+
+                BudgetInfoLabel.Text = $"Бюджет: {categoryBudget.Limit:C}";
+                BudgetDetailsLabel.Text = $"Потрачено: {categoryBudget.Spent:C} | Осталось: {remaining:C} ({progress:F1}%)";
+
+                // Меняем цвет в зависимости от использования бюджета
+                BudgetInfoLabel.TextColor = progress > 90 ? Color.FromArgb("#ED4245") :
+                                           progress > 70 ? Color.FromArgb("#FEE75C") :
+                                           Color.FromArgb("#57F287");
+            }
+            else
+            {
+                BudgetEntry.Text = string.Empty;
+                BudgetInfoFrame.IsVisible = false;
+            }
+        }
+
+        private void ShowCreatePanel(object sender, EventArgs e)
+        {
+            _selectedCategory = null;
+            EditPanel.IsVisible = true;
+            PanelTitle.Text = "Создание категории";
+
+            // Очищаем поля
+            CategoryEntry.Text = string.Empty;
+            TypePicker.SelectedIndex = -1;
+            BudgetEntry.Text = string.Empty;
+            BudgetInfoFrame.IsVisible = false;
+
+            // Настройка видимости кнопок
+            SaveButton.IsVisible = true;
+            UpdateButton.IsVisible = false;
+            DeleteButton.IsVisible = false;
+        }
+
+        private void ShowEditPanel()
+        {
+            EditPanel.IsVisible = true;
+            PanelTitle.Text = "Редактирование категории";
+
+            // Настройка видимости кнопок
+            SaveButton.IsVisible = false;
+            UpdateButton.IsVisible = true;
+            DeleteButton.IsVisible = true;
+        }
+
+        private async void SaveCategory(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(CategoryEntry.Text) || TypePicker.SelectedIndex == -1)
+            {
+                await Application.Current.MainPage.DisplayAlert("Ошибка", "Заполните название и тип категории", "OK");
+                return;
             }
 
-            BudgetsList.ItemsSource = _budgets;
-        }
-
-        private async void AddBudgetClicked(object sender, EventArgs e)
-        {
-            string category = await Application.Current.MainPage.DisplayActionSheet(
-                "Выберите категорию для бюджета:",
-                "Отмена", null,
-                _categories.Select(c => c.Name).ToArray()
-            );
-
-            if (string.IsNullOrEmpty(category))
-                return;
-
-            string limitStr = await Application.Current.MainPage.DisplayPromptAsync(
-                "Лимит",
-                "Введите сумму бюджета:",
-                keyboard: Keyboard.Numeric);
-
-            if (!double.TryParse(limitStr, out double limit))
-                return;
-
-            var item = new BudgetItem
+            var item = new CategoryItem
             {
                 ProfileId = _profileId,
-                Category = category,
-                Limit = limit,
-                CreatedAt = DateTime.Now,
-                ResetDate = DateTime.Now.AddMonths(1)
+                Name = CategoryEntry.Text.Trim(),
+                Type = TypePicker.SelectedItem.ToString()
             };
 
-            await _budgetDb.SaveBudgetAsync(item);
-            LoadBudgets();
+            await _db.SaveCategoryAsync(item);
+
+            // Если указан бюджет - создаем его
+            if (!string.IsNullOrWhiteSpace(BudgetEntry.Text) && double.TryParse(BudgetEntry.Text, out double budgetAmount))
+            {
+                await CreateBudgetForCategory(item.Name, budgetAmount);
+            }
+
+            ClearForm();
+            await LoadDataAsync();
+
+            await Application.Current.MainPage.DisplayAlert("Успех", "Категория создана", "OK");
         }
 
-        private async void DeleteBudgetClicked(object sender, EventArgs e)
+        private async void UpdateCategory(object sender, EventArgs e)
         {
-            var item = (sender as Button).CommandParameter as BudgetItem;
+            if (_selectedCategory == null) return;
 
-            if (item == null) return;
+            if (string.IsNullOrWhiteSpace(CategoryEntry.Text) || TypePicker.SelectedIndex == -1)
+            {
+                await Application.Current.MainPage.DisplayAlert("Ошибка", "Заполните все поля", "OK");
+                return;
+            }
 
-            await _budgetDb.DeleteBudgetAsync(item);
-            LoadBudgets();
+            // Сохраняем старое название для обновления бюджета
+            var oldName = _selectedCategory.Name;
+
+            _selectedCategory.Name = CategoryEntry.Text.Trim();
+            _selectedCategory.Type = TypePicker.SelectedItem.ToString();
+
+            await _db.SaveCategoryAsync(_selectedCategory);
+
+            // Обновляем бюджет если он указан в поле ввода
+            if (!string.IsNullOrWhiteSpace(BudgetEntry.Text) && double.TryParse(BudgetEntry.Text, out double budgetAmount))
+            {
+                await CreateBudgetForCategory(_selectedCategory.Name, budgetAmount);
+            }
+
+            // Обновляем название категории в бюджете, если он есть
+            var existingBudget = _budgets.FirstOrDefault(b => b.Category == oldName);
+            if (existingBudget != null && oldName != _selectedCategory.Name)
+            {
+                existingBudget.Category = _selectedCategory.Name;
+                await _budgetDb.SaveBudgetAsync(existingBudget);
+            }
+
+            ClearForm();
+            await LoadDataAsync();
+
+            await Application.Current.MainPage.DisplayAlert("Успех", "Категория обновлена", "OK");
+        }
+
+        private async Task CreateBudgetForCategory(string categoryName, double amount)
+        {
+            var existingBudget = _budgets.FirstOrDefault(b => b.Category == categoryName);
+
+            if (existingBudget != null)
+            {
+                // Обновляем существующий бюджет
+                existingBudget.Limit = amount;
+                existingBudget.ResetDate = DateTime.Now.AddMonths(1);
+                await _budgetDb.SaveBudgetAsync(existingBudget);
+            }
+            else
+            {
+                // Создаем новый бюджет
+                var budgetItem = new BudgetItem
+                {
+                    ProfileId = _profileId,
+                    Category = categoryName,
+                    Limit = amount,
+                    Spent = 0,
+                    CreatedAt = DateTime.Now,
+                    ResetDate = DateTime.Now.AddMonths(1)
+                };
+                await _budgetDb.SaveBudgetAsync(budgetItem);
+            }
+        }
+
+        private async void DeleteCategory(object sender, EventArgs e)
+        {
+            if (_selectedCategory == null) return;
+
+            bool confirm = await Application.Current.MainPage.DisplayAlert(
+                "Подтверждение",
+                $"Вы уверены, что хотите удалить категорию \"{_selectedCategory.Name}\"?",
+                "Да", "Нет");
+
+            if (confirm)
+            {
+                // Удаляем связанный бюджет
+                var relatedBudget = _budgets.FirstOrDefault(b => b.Category == _selectedCategory.Name);
+                if (relatedBudget != null)
+                {
+                    await _budgetDb.DeleteBudgetAsync(relatedBudget);
+                }
+
+                await _db.DeleteCategoryAsync(_selectedCategory);
+                ClearForm();
+                await LoadDataAsync();
+
+                await Application.Current.MainPage.DisplayAlert("Успех", "Категория удалена", "OK");
+            }
+        }
+
+        private void ClearForm()
+        {
+            _selectedCategory = null;
+            EditPanel.IsVisible = false;
+            CategoryEntry.Text = string.Empty;
+            TypePicker.SelectedIndex = -1;
+            BudgetEntry.Text = string.Empty;
+            BudgetInfoFrame.IsVisible = false;
         }
     }
 }

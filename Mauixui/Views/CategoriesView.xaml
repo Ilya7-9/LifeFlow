@@ -9,72 +9,131 @@
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-    
+
         <VerticalStackLayout Padding="20" Spacing="15" Grid.Column="0">
-            <Label Text="📁 Категории"
+            <Label Text="Категории"
                    FontSize="24"
                    FontAttributes="Bold"
                    TextColor="White"/>
-
-
-            <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12">
-                <HorizontalStackLayout Spacing="10">
-                    <Entry x:Name="CategoryEntry"
-                           Placeholder="Название категории"
-                           BackgroundColor="#40444B"
-                           PlaceholderColor="#888888"
-                           TextColor="White"
-                           WidthRequest="200"/>
-                    <Picker x:Name="TypePicker" WidthRequest="120">
-                        <Picker.Items>
-                            <x:String>Доход</x:String>
-                            <x:String>Расход</x:String>
-                        </Picker.Items>
-                    </Picker>
-                    <Button Text="➕"
-                            BackgroundColor="#4CAF50"
-                            TextColor="White"
-                            Clicked="AddCategory"/>
-                </HorizontalStackLayout>
-            </Frame>
 
             <ScrollView>
                 <VerticalStackLayout x:Name="CategoryList" Spacing="8"/>
             </ScrollView>
         </VerticalStackLayout>
-    
-        <VerticalStackLayout Grid.Column="1">
-            <Label Text="Бюджеты" FontSize="26" TextColor="White" />
 
-            <Button 
-            Text="Добавить бюджет"
-            Clicked="AddBudgetClicked"
-            BackgroundColor="#40444B"
-            TextColor="White"
-            CornerRadius="12"/>
+        <VerticalStackLayout Grid.Column="1" 
+                             x:Name="EditPanel" 
+                             Padding="20" 
+                             Spacing="15" 
+                             HorizontalOptions="FillAndExpand" 
+                             VerticalOptions="FillAndExpand"
+                             IsVisible="False">
 
-            <CollectionView x:Name="BudgetsList" SelectionMode="None">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate>
-                        <Frame BackgroundColor="#2D2D30" CornerRadius="12" Padding="12" Margin="0,5">
-                            <VerticalStackLayout>
-                                <Label Text="{Binding Category}" TextColor="White" FontSize="18"/>
-                                <Label Text="{Binding Limit, StringFormat='Лимит: {0} ₽'}" TextColor="LightGray"/>
-                                <Label Text="{Binding Spent, StringFormat='Потрачено: {0} ₽'}" TextColor="LightGray"/>
+            <Label x:Name="PanelTitle" 
+                   Text="Создание категории" 
+                   FontSize="26" 
+                   TextColor="White" 
+                   FontAttributes="Bold"/>
 
-                                <Button 
-                                Text="Удалить"
-                                Clicked="DeleteBudgetClicked"
-                                BackgroundColor="#8B0000"
+            <Frame BackgroundColor="#2D2D30" CornerRadius="16">
+                <VerticalStackLayout>
+                    <Label Text="Название:" 
+                           HorizontalOptions="Center"
+                           FontSize="20"
+                           Margin="0, 0, 0, 10"/>
+                    <Entry x:Name="CategoryEntry"
+                            Placeholder="Название категории"
+                            BackgroundColor="#40444B"
+                            PlaceholderColor="#888888"
+                            TextColor="White"
+                            WidthRequest="200"
+                            FontSize="20"
+                           Margin="0, 0, 0, 20"/>
+                    <Label Text="Тип:" 
+                           HorizontalOptions="Center"
+                           FontSize="20"
+                           Margin="0, 0, 0, 10"/>
+                    <Picker x:Name="TypePicker" WidthRequest="200" Margin="0, 0, 0, 20">
+                        <Picker.Items>
+                            <x:String>Доход</x:String>
+                            <x:String>Расход</x:String>
+                        </Picker.Items>
+                    </Picker>
+                    <Label Text="Бюджет (месячный):" 
+                           HorizontalOptions="Center"
+                           FontSize="20"
+                           Margin="0, 0, 0, 10"/>
+                    <Entry x:Name="BudgetEntry"
+                            Placeholder="0.00"
+                            BackgroundColor="#40444B"
+                            PlaceholderColor="#888888"
+                            TextColor="White"
+                            WidthRequest="200"
+                            FontSize="20"
+                            Keyboard="Numeric"
+                           Margin="0, 0, 0, 20"/>
+
+                    <!-- Отображение текущего бюджета -->
+                    <Frame x:Name="BudgetInfoFrame"
+                           BackgroundColor="#2A2D32"
+                           CornerRadius="8"
+                           Padding="10"
+                           Margin="0, 0, 0, 20"
+                           IsVisible="False">
+                        <VerticalStackLayout Spacing="5">
+                            <Label x:Name="BudgetInfoLabel"
+                                   Text="Информация о бюджете"
+                                   TextColor="#57F287"
+                                   FontSize="14"
+                                   HorizontalOptions="Center"/>
+                            <Label x:Name="BudgetDetailsLabel"
+                                   Text=""
+                                   TextColor="#888888"
+                                   FontSize="12"
+                                   HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </Frame>
+
+                    <!-- Кнопки управления -->
+                    <Grid ColumnDefinitions="*,*" 
+                          ColumnSpacing="10" 
+                          HorizontalOptions="Center"
+                          Margin="0, 10, 0, 0">
+
+                        <Button x:Name="SaveButton"
+                                Grid.Column="0"
+                                Text="Создать"
+                                BackgroundColor="#5865F2"
                                 TextColor="White"
-                                CornerRadius="10"
-                                Margin="0,5,0,0"
-                                CommandParameter="{Binding}"/>
-                            </VerticalStackLayout>
-                        </Frame>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                HeightRequest="40"
+                                Clicked="SaveCategory"/>
+
+                        <Button x:Name="UpdateButton"
+                                Grid.Column="0"
+                                Text="Изменить"
+                                BackgroundColor="#57F287"
+                                TextColor="White"
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                HeightRequest="40"
+                                Clicked="UpdateCategory"
+                                IsVisible="False"/>
+
+                        <Button x:Name="DeleteButton"
+                                Grid.Column="1"
+                                Text="Удалить"
+                                BackgroundColor="#ED4245"
+                                TextColor="White"
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                HeightRequest="40"
+                                Clicked="DeleteCategory"
+                                IsVisible="False"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
         </VerticalStackLayout>
     </Grid>
 </ContentView>

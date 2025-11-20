@@ -172,7 +172,7 @@ namespace Mauixui.Views
 
                 var amountLabel = new Label
                 {
-                    Text = $"{(item.Type == "Доход" ? "+" : "-")}{item.Amount:F2} ₽",
+                    Text = $"{(item.Type == "Доход" ? "+" : "-")}{item.Amount:F2} Br",
                     TextColor = Color.FromArgb(color),
                     FontSize = 16,
                     FontAttributes = FontAttributes.Bold,
@@ -227,7 +227,7 @@ namespace Mauixui.Views
             decimal expenses = _items.Where(i => i.Type == "Расход").Sum(i => i.Amount);
             decimal balance = income - expenses;
 
-            BalanceLabel.Text = $"Баланс: {balance:F2} ₽";
+            BalanceLabel.Text = $"Баланс: {balance:F2} Br";
             BalanceLabel.TextColor = balance >= 0 ? Color.FromArgb("#23D160") : Color.FromArgb("#FF4B4B");
         }
 

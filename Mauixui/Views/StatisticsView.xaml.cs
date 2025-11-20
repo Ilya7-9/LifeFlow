@@ -57,9 +57,9 @@ namespace Mauixui.Views
             decimal expense = _items.Where(i => i.Type == "Расход").Sum(i => i.Amount);
             decimal net = income - expense;
 
-            SummaryIncome.Text = $"📈 Доход: {income:F2} ₽";
-            SummaryExpense.Text = $"📉 Расход: {expense:F2} ₽";
-            SummaryNet.Text = $"💵 Чистый итог: {net:F2} ₽";
+            SummaryIncome.Text = $"📈 Доход: {income:F2} Br";
+            SummaryExpense.Text = $"📉 Расход: {expense:F2} Br";
+            SummaryNet.Text = $"💵 Чистый итог: {net:F2} Br";
 
             var topInc = _items.Where(i => i.Type == "Доход")
                                .GroupBy(i => i.Category)
@@ -67,7 +67,7 @@ namespace Mauixui.Views
                                .Take(5);
 
             foreach (var g in topInc)
-                TopIncomeList.Children.Add(new Label { Text = $"{g.Key}: {g.Sum(x => x.Amount):F2} ₽", TextColor = Color.FromArgb("#FFFFFF") });
+                TopIncomeList.Children.Add(new Label { Text = $"{g.Key}: {g.Sum(x => x.Amount):F2} Br", TextColor = Color.FromArgb("#FFFFFF") });
 
             var topExp = _items.Where(i => i.Type == "Расход")
                                .GroupBy(i => i.Category)
@@ -75,7 +75,7 @@ namespace Mauixui.Views
                                .Take(5);
 
             foreach (var g in topExp)
-                TopExpensesList.Children.Add(new Label { Text = $"{g.Key}: {g.Sum(x => x.Amount):F2} ₽", TextColor = Color.FromArgb("#FFFFFF") });
+                TopExpensesList.Children.Add(new Label { Text = $"{g.Key}: {g.Sum(x => x.Amount):F2} Br", TextColor = Color.FromArgb("#FFFFFF") });
 
             // Лучший/худший месяц
             var byMonth = _items.GroupBy(i => new DateTime(i.Date.Year, i.Date.Month, 1))
@@ -85,8 +85,8 @@ namespace Mauixui.Views
 
             var best = byMonth.FirstOrDefault();
             var worst = byMonth.OrderBy(x => x.Net).FirstOrDefault();
-            BestMonth.Text = best != null ? $"Лучший: {best.Month:MMMM yyyy} — {best.Net:F2} ₽" : "";
-            WorstMonth.Text = worst != null ? $"Худший: {worst.Month:MMMM yyyy} — {worst.Net:F2} ₽" : "";
+            BestMonth.Text = best != null ? $"Лучший: {best.Month:MMMM yyyy} — {best.Net:F2} Br" : "";
+            WorstMonth.Text = worst != null ? $"Худший: {worst.Month:MMMM yyyy} — {worst.Net:F2} Br" : "";
 
             // Прогноз на месяц (упрощённый)
             var current = _items.Where(i => i.Date.Month == DateTime.Now.Month && i.Date.Year == DateTime.Now.Year).ToList();
@@ -98,7 +98,7 @@ namespace Mauixui.Views
                 decimal dailyNet = (currIncome - currExpense) / day;
                 int daysInMonth = DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month);
                 decimal forecast = dailyNet * daysInMonth;
-                PredictionLabel.Text = $"Прогноз чистого дохода за месяц: {forecast:F2} ₽";
+                PredictionLabel.Text = $"Прогноз чистого дохода за месяц: {forecast:F2} Br";
             }
             else
             {
