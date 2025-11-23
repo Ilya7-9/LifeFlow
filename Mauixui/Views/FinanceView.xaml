@@ -16,16 +16,15 @@
 
                 <HorizontalStackLayout Spacing="10">
                     <Button Text="📁 Категории" BackgroundColor="#40444B" TextColor="White" Clicked="OpenCategories"/>
-                    <Button Text="💼 Бюджеты" BackgroundColor="#40444B" TextColor="White" Clicked="OpenBudgets"/>
                     <Button Text="🏦 Активы" BackgroundColor="#40444B" TextColor="White" Clicked="OpenAssets"/>
                     <Button Text="📊 Статистика" BackgroundColor="#40444B" TextColor="White" Clicked="OpenStatistics"/>
                 </HorizontalStackLayout>
 
                 <!-- Добавление операции -->
                 <Frame BackgroundColor="#2D2D30" CornerRadius="16" Padding="12" Margin="0,10,0,0">
-                    <VerticalStackLayout Spacing="10">
+                    <VerticalStackLayout Spacing="10" >
 
-                        <HorizontalStackLayout Spacing="10">
+                        <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
                             <Picker x:Name="TypePicker" WidthRequest="150" Title="Тип">
                                 <Picker.Items>
                                     <x:String>Доход</x:String>
@@ -34,6 +33,22 @@
                             </Picker>
 
                             <Picker x:Name="CategoryPicker" WidthRequest="150" Title="Категория"/>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Label Text="Сортировка"
+                                       Grid.Row="0"/>
+                                <DatePicker x:Name="DatePicker" 
+                                            Format="dd.MM.yyyy" 
+                                            TextColor="White" 
+                                            WidthRequest="150" 
+                                            VerticalOptions="End"
+                                            Grid.Row="1"/>
+                            </Grid>
+
                         </HorizontalStackLayout>
 
                         <Entry x:Name="DescriptionEntry" Placeholder="Описание"
@@ -41,8 +56,6 @@
 
                         <Entry x:Name="AmountEntry" Placeholder="Сумма" Keyboard="Numeric"
                                BackgroundColor="#40444B" TextColor="White" PlaceholderColor="#888888"/>
-
-                        <DatePicker x:Name="DatePicker" Format="dd.MM.yyyy" TextColor="White"/>
 
                         <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
                             <Button Text="Добавить" BackgroundColor="#4CAF50" TextColor="White" Clicked="AddFinanceItem"/>
@@ -53,6 +66,32 @@
                 </Frame>
 
                 <Label Text="История операций" TextColor="White" FontAttributes="Bold" FontSize="16"/>
+
+                <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10">
+                    <Entry x:Name="SearchEntry" 
+                           Grid.Column="0"
+                           Placeholder="Поиск по описанию или категории операции..."
+                           BackgroundColor="#40444B" 
+                           TextColor="White" 
+                           PlaceholderColor="#888888"/>
+
+                    <Picker x:Name="SortPicker"
+                            SelectedItem="0"
+                            Grid.Column="1"
+                            WidthRequest="160"
+                            BackgroundColor="#40444B"
+                            TextColor="White">
+                        <Picker.Items>
+                            <x:String>📅 Дата ▼</x:String>
+                            <x:String>📅 Дата ▲</x:String>
+                            <x:String>💰 Сумма ▼</x:String>
+                            <x:String>💰 Сумма ▲</x:String>
+                            <x:String>📝 Название ▲</x:String>
+                            <x:String>📝 Название ▼</x:String>
+                            <x:String>📊 Тип ▼</x:String>
+                        </Picker.Items>
+                    </Picker>
+                </Grid>
 
                 <!-- История (ПРАВИЛЬНО) -->
                 <ScrollView HeightRequest="250">

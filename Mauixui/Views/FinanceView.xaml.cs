@@ -19,6 +19,11 @@ namespace Mauixui.Views
         private CategoryDatabase _categoryDb;
         private List<CategoryItem> _categories = new();
 
+        // Переменные для сортировки и поиска
+        private string _currentSortField = "Date";
+        private bool _isAscending = false;
+        private string _searchText = "";
+
         public FinanceView()
         {
             InitializeComponent();
@@ -28,8 +33,130 @@ namespace Mauixui.Views
             _db = profileService.GetFinanceDatabase(_profileId);
             _categoryDb = profileService.GetCategoryDatabase(_profileId);
 
+            InitializeSortPicker();
+            SetupEventHandlers();
             LoadFinanceItems();
             LoadCategories();
+        }
+
+        private void InitializeSortPicker()
+        {
+            SortPicker.SelectedIndex = 0; // Устанавливаем первую сортировку по умолчанию
+            SortPicker.SelectedIndexChanged += OnSortPickerChanged;
+        }
+
+        private void SetupEventHandlers()
+        {
+            // Поиск при изменении текста
+            SearchEntry.TextChanged += OnSearchTextChanged;
+        }
+
+        // Обработчик изменения сортировки
+        private void OnSortPickerChanged(object sender, EventArgs e)
+        {
+            if (SortPicker.SelectedIndex == -1) return;
+
+            var selectedSort = SortPicker.SelectedItem.ToString();
+            ApplySorting(selectedSort);
+        }
+
+        // Обработчик поиска
+        private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+        {
+            _searchText = SearchEntry.Text?.ToLower() ?? "";
+            FilterAndSortItems();
+        }
+
+        // Применить выбранную сортировку
+        private void ApplySorting(string sortOption)
+        {
+            switch (sortOption)
+            {
+                case "📅 Дата ▼":
+                    _currentSortField = "Date";
+                    _isAscending = false;
+                    break;
+                case "📅 Дата ▲":
+                    _currentSortField = "Date";
+                    _isAscending = true;
+                    break;
+                case "💰 Сумма ▼":
+                    _currentSortField = "Amount";
+                    _isAscending = false;
+                    break;
+                case "💰 Сумма ▲":
+                    _currentSortField = "Amount";
+                    _isAscending = true;
+                    break;
+                case "📝 Название ▲":
+                    _currentSortField = "Description";
+                    _isAscending = true;
+                    break;
+                case "📝 Название ▼":
+                    _currentSortField = "Description";
+                    _isAscending = false;
+                    break;
+                case "📊 Тип ▼":
+                    _currentSortField = "Type";
+                    _isAscending = false;
+                    break;
+            }
+
+            FilterAndSortItems();
+        }
+
+        // Фильтрация и сортировка элементов
+        // Фильтрация и сортировка элементов
+        private void FilterAndSortItems()
+        {
+            if (!_items.Any()) return;
+
+            // Фильтрация
+            var filtered = _items.Where(item =>
+                string.IsNullOrEmpty(_searchText) ||
+                item.Description.ToLower().Contains(_searchText) ||
+                item.Category.ToLower().Contains(_searchText))
+                .ToList();
+
+            // Сортировка
+            switch (_currentSortField)
+            {
+                case "Date":
+                    filtered = _isAscending ?
+                        filtered.OrderBy(item => item.Date).ToList() :
+                        filtered.OrderByDescending(item => item.Date).ToList();
+                    break;
+                case "Amount":
+                    // Исправленная сортировка по сумме с учетом типа операции
+                    if (_isAscending)
+                    {
+                        // По возрастанию: сначала расходы (отрицательные), потом доходы (положительные)
+                        filtered = filtered
+                            .OrderBy(item => item.Type == "Доход" ? item.Amount : -item.Amount)
+                            .ToList();
+                    }
+                    else
+                    {
+                        // По убыванию: сначала доходы (положительные), потом расходы (отрицательные)
+                        filtered = filtered
+                            .OrderByDescending(item => item.Type == "Доход" ? item.Amount : -item.Amount)
+                            .ToList();
+                    }
+                    break;
+                case "Description":
+                    filtered = _isAscending ?
+                        filtered.OrderBy(item => item.Description).ToList() :
+                        filtered.OrderByDescending(item => item.Description).ToList();
+                    break;
+                case "Type":
+                    filtered = _isAscending ?
+                        filtered.OrderBy(item => item.Type).ThenByDescending(item => item.Date).ToList() :
+                        filtered.OrderByDescending(item => item.Type).ThenByDescending(item => item.Date).ToList();
+                    break;
+            }
+
+            // Обновление отображаемого списка
+            RenderFinanceItems(filtered);
         }
 
         private async void LoadCategories()
@@ -117,7 +244,7 @@ namespace Mauixui.Views
         private async void LoadFinanceItems()
         {
             _items = await _db.GetItemsAsync(_profileId);
-            RenderFinanceItems();
+            FilterAndSortItems(); // Используем фильтрацию и сортировку вместо прямого рендеринга
             UpdateBalance();
         }
 
@@ -130,7 +257,7 @@ namespace Mauixui.Views
             {
                 FinanceList.Children.Add(new Label
                 {
-                    Text = "Пока нет записей",
+                    Text = string.IsNullOrEmpty(_searchText) ? "Пока нет записей" : "Записи не найдены",
                     TextColor = Color.FromArgb("#888888"),
                     HorizontalOptions = LayoutOptions.Center,
                     Margin = new Thickness(0, 30, 0, 0)
@@ -138,7 +265,7 @@ namespace Mauixui.Views
                 return;
             }
 
-            foreach (var item in list.OrderByDescending(i => i.Date))
+            foreach (var item in list) // Убрали OrderByDescending, т.к. сортировка уже применена
             {
                 var color = item.Type == "Доход" ? "#23D160" : "#FF4B4B";
 
@@ -185,7 +312,7 @@ namespace Mauixui.Views
 
                 layout.Children.Add(grid);
 
-                // ДОБАВЛЕНА КНОПКА УДАЛЕНИЯ
+                // КНОПКА УДАЛЕНИЯ
                 var deleteBtn = new Button
                 {
                     Text = "Удалить",
@@ -286,11 +413,6 @@ namespace Mauixui.Views
         private void OpenCategories(object sender, EventArgs e)
         {
             ShowInnerView(new CategoriesView());
-        }
-
-        private void OpenBudgets(object sender, EventArgs e)
-        {
-            ShowInnerView(new BudgetsView());
         }
 
         private void OpenAssets(object sender, EventArgs e)

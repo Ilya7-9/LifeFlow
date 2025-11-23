@@ -85,14 +85,52 @@
 
         <!-- Списки -->
         <Label Text="Список активов" TextColor="White" FontAttributes="Bold" />
-        <ScrollView HeightRequest="150">
-            <VerticalStackLayout x:Name="AssetsList" Spacing="8" Padding="0"/>
-        </ScrollView>
+        <CollectionView x:Name="AssetsCollectionView" 
+                HeightRequest="150"
+                BackgroundColor="#2D2D30"
+                ItemsLayout="VerticalList">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame BackgroundColor="#2D2D30" CornerRadius="10" Padding="10" Margin="5">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding Name}" TextColor="#FFFFFF" FontSize="16" FontAttributes="Bold"/>
+                            <Label Text="{Binding Category}" TextColor="#BBBBBB" FontSize="12"/>
+                            <Label Text="{Binding Value, StringFormat='{0:F2} Br'}" TextColor="#23D160" FontSize="14"/>
+                            <HorizontalStackLayout Spacing="8" HorizontalOptions="End">
+                                <Button Text="Изм." BackgroundColor="#40444B" TextColor="#FFFFFF" CornerRadius="8"
+                                Clicked="EditAssetClicked" CommandParameter="{Binding .}"/>
+                                <Button Text="Удал." BackgroundColor="#8B0000" TextColor="#FFFFFF" CornerRadius="8"
+                                Clicked="DeleteAssetClicked" CommandParameter="{Binding .}"/>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate> 
+        </CollectionView>
 
-        <Label Text="Список долгов" TextColor="White" FontAttributes="Bold" />
-        <ScrollView HeightRequest="150">
-            <VerticalStackLayout x:Name="DebtsList" Spacing="8" Padding="0"/>
-        </ScrollView>
+        <Label Text="Список активов" TextColor="White" FontAttributes="Bold" />
+        <CollectionView x:Name="DebtsCollectionView" 
+        HeightRequest="150"
+        BackgroundColor="#2D2D30"
+        ItemsLayout="VerticalList">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame BackgroundColor="#2D2D30" CornerRadius="10" Padding="10" Margin="5">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding Name}" TextColor="#FFFFFF" FontSize="16" FontAttributes="Bold"/>
+                            <Label Text="{Binding Category}" TextColor="#BBBBBB" FontSize="12"/>
+                            <Label Text="{Binding Value, StringFormat='{0:F2} Br'}" TextColor="#23D160" FontSize="14"/>
+                            <HorizontalStackLayout Spacing="8" HorizontalOptions="End">
+                                <Button Text="Изм." BackgroundColor="#40444B" TextColor="#FFFFFF" CornerRadius="8"
+                        Clicked="EditAssetClicked" CommandParameter="{Binding .}"/>
+                                <Button Text="Удал." BackgroundColor="#8B0000" TextColor="#FFFFFF" CornerRadius="8"
+                        Clicked="DeleteAssetClicked" CommandParameter="{Binding .}"/>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate> DebtsCollectionView
+        </CollectionView>
 
     </VerticalStackLayout>
 </ContentView>

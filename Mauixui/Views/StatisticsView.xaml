@@ -4,67 +4,131 @@
              x:Class="Mauixui.Views.StatisticsView"
              BackgroundColor="#1E1E1E">
 
-    <!-- Корневой Grid чтобы гарантировать размер и поведение FillAndExpand -->
-    <Grid RowDefinitions="*,Auto" Padding="0">
+    <ScrollView>
+        <VerticalStackLayout Spacing="16" Padding="16">
 
-        <!-- ScrollView должен быть один дочерний элемент и занимать доступное место -->
-        <ScrollView Grid.Row="0" Padding="20">
-            <VerticalStackLayout Spacing="20">
+            <!-- Header -->
+            <Grid>
+                <Label Text="📊 Статистика" 
+                       FontAttributes="Bold" 
+                       FontSize="24" 
+                       TextColor="White"
+                       HorizontalOptions="Start"/>
 
-                <Label Text="📊 Статистика"
-               FontAttributes="Bold"
-               FontSize="26"
-               TextColor="White"
-               HorizontalOptions="Center"/>
+                <Picker x:Name="PeriodPicker"
+                        HorizontalOptions="End"
+                        WidthRequest="160"
+                        BackgroundColor="#40444B"
+                        TextColor="White"
+                        FontSize="14">
+                    <Picker.Items>
+                        <x:String>Текущий месяц</x:String>
+                        <x:String>Прошлый месяц</x:String>
+                        <x:String>Текущий год</x:String>
+                    </Picker.Items>
+                </Picker>
+            </Grid>
 
-                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
-                    <VerticalStackLayout>
-                        <Label Text="Общая финансовая сводка" TextColor="White" FontAttributes="Bold" FontSize="18"/>
-                        <Label x:Name="SummaryIncome" TextColor="#23D160" FontSize="15"/>
-                        <Label x:Name="SummaryExpense" TextColor="#FF4B4B" FontSize="15"/>
-                        <Label x:Name="SummaryNet" TextColor="#AAAAAA" FontSize="15"/>
+            <!-- Основные метрики -->
+            <Frame BackgroundColor="#2D2D30" CornerRadius="12" Padding="16">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Основные показатели" 
+                           TextColor="White" 
+                           FontAttributes="Bold" 
+                           FontSize="18"/>
+
+                    <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                        <!-- Доходы -->
+                        <Label Text="Общий доход:" TextColor="#BBBBBB" Grid.Row="0" Grid.Column="0"/>
+                        <Label x:Name="TotalIncomeLabel" Text="0 Br" TextColor="#23D160" FontAttributes="Bold" Grid.Row="0" Grid.Column="1"/>
+
+                        <Label Text="Средний доход:" TextColor="#BBBBBB" Grid.Row="1" Grid.Column="0"/>
+                        <Label x:Name="AvgIncomeLabel" Text="0 Br" TextColor="#23D160" Grid.Row="1" Grid.Column="1"/>
+
+                        <!-- Расходы -->
+                        <Label Text="Общий расход:" TextColor="#BBBBBB" Grid.Row="0" Grid.Column="2"/>
+                        <Label x:Name="TotalExpenseLabel" Text="0 Br" TextColor="#FF4B4B" FontAttributes="Bold" Grid.Row="0" Grid.Column="3"/>
+
+                        <Label Text="Средний расход:" TextColor="#BBBBBB" Grid.Row="1" Grid.Column="2"/>
+                        <Label x:Name="AvgExpenseLabel" Text="0 Br" TextColor="#FF4B4B" Grid.Row="1" Grid.Column="3"/>
+                    </Grid>
+
+                    <!-- Итоги -->
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12" Margin="0,8,0,0">
+                        <Label Text="Чистый результат:" TextColor="#BBBBBB" Grid.Column="0"/>
+                        <Label x:Name="NetWorthLabel" Text="0 Br" TextColor="#23D160" FontAttributes="Bold" Grid.Column="1"/>
+
+                        <Label Text="Норма сбережений:" TextColor="#BBBBBB" Grid.Column="2"/>
+                        <Label x:Name="SavingsRateLabel" Text="0%" TextColor="#23D160" FontAttributes="Bold" Grid.Column="3"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Топ категорий -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <!-- Доходы -->
+                <Frame BackgroundColor="#2D2D30" CornerRadius="12" Padding="12">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📈 Топ доходов по категориям" 
+                               TextColor="White" 
+                               FontAttributes="Bold" 
+                               FontSize="16"/>
+                        <VerticalStackLayout x:Name="IncomeChart" Spacing="6" HeightRequest="120"/>
                     </VerticalStackLayout>
                 </Frame>
 
-                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
-                    <VerticalStackLayout>
-                        <Label Text="ТОП категорий расходов" TextColor="White" FontAttributes="Bold" FontSize="18"/>
-                        <VerticalStackLayout x:Name="TopExpensesList" Spacing="4"/>
+                <!-- Расходы -->
+                <Frame BackgroundColor="#2D2D30" CornerRadius="12" Padding="12" Grid.Column="1">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📉 Топ расходов по категориям" 
+                               TextColor="White" 
+                               FontAttributes="Bold" 
+                               FontSize="16"/>
+                        <VerticalStackLayout x:Name="ExpenseChart" Spacing="6" HeightRequest="120"/>
+                    </VerticalStackLayout>
+                </Frame>
+            </Grid>
+
+            <!-- Прогноз и лучший месяц -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <!-- Прогноз -->
+                <Frame BackgroundColor="#2D2D30" CornerRadius="12" Padding="12">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="🔮 Прогноз на месяц" 
+                               TextColor="White" 
+                               FontAttributes="Bold" 
+                               FontSize="16"/>
+                        <Label x:Name="ProjectedNetLabel" Text="0 Br" TextColor="#23D160" FontSize="20" FontAttributes="Bold"/>
+                        <Label Text="Доход:" TextColor="#BBBBBB" FontSize="12"/>
+                        <Label x:Name="ProjectedIncomeLabel" Text="0 Br" TextColor="#23D160" FontSize="14"/>
+                        <Label Text="Расход:" TextColor="#BBBBBB" FontSize="12"/>
+                        <Label x:Name="ProjectedExpenseLabel" Text="0 Br" TextColor="#FF4B4B" FontSize="14"/>
                     </VerticalStackLayout>
                 </Frame>
 
-                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
-                    <VerticalStackLayout>
-                        <Label Text="ТОП категорий доходов" TextColor="White" FontAttributes="Bold" FontSize="18"/>
-                        <VerticalStackLayout x:Name="TopIncomeList" Spacing="4"/>
+                <!-- Лучший месяц -->
+                <Frame BackgroundColor="#2D2D30" CornerRadius="12" Padding="12" Grid.Column="1">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="🏆 Лучший месяц" 
+                               TextColor="White" 
+                               FontAttributes="Bold" 
+                               FontSize="16"/>
+                        <Label x:Name="BestMonthLabel" Text="Нет данных" TextColor="White" FontSize="14"/>
+                        <Label x:Name="BestMonthAmount" Text="0 Br" TextColor="#23D160" FontSize="16" FontAttributes="Bold"/>
                     </VerticalStackLayout>
                 </Frame>
+            </Grid>
 
-                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
-                    <VerticalStackLayout>
-                        <Label Text="Лучший / Худший месяц" TextColor="White" FontAttributes="Bold" FontSize="18"/>
-                        <Label x:Name="BestMonth" TextColor="#23D160"/>
-                        <Label x:Name="WorstMonth" TextColor="#FF4B4B"/>
-                    </VerticalStackLayout>
-                </Frame>
+            <!-- Кнопка обновления -->
+            <Button x:Name="RefreshButton"
+                    Text="🔄 Обновить" 
+                    BackgroundColor="#4CAF50"
+                    TextColor="White" 
+                    FontAttributes="Bold"
+                    CornerRadius="10"
+                    HeightRequest="44"
+                    Clicked="ReloadStatistics"/>
 
-                <Frame BackgroundColor="#2D2D30" Padding="14" CornerRadius="12">
-                    <VerticalStackLayout>
-                        <Label Text="Прогноз на текущий месяц" TextColor="White" FontAttributes="Bold" FontSize="18"/>
-                        <Label x:Name="PredictionLabel" TextColor="#AAAAAA"/>
-                    </VerticalStackLayout>
-                </Frame>
-
-                <!-- Кнопка внизу контента (внутри ScrollView) -->
-                <Button Text="Обновить статистику" BackgroundColor="#4CAF50" TextColor="White" Clicked="ReloadStatistics"/>
-
-            </VerticalStackLayout>
-        </ScrollView>
-
-        <!-- Вторая строка грида: можно поместить тулбар/футер если нужно -->
-        <StackLayout Grid.Row="1" Orientation="Horizontal" Padding="12" HorizontalOptions="End">
-            <!-- Пустая или кнопки -->
-        </StackLayout>
-
-    </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentView>

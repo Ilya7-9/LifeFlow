@@ -30,7 +30,21 @@ namespace Mauixui.Views
             // По умолчанию — актив
             TypePicker.SelectedIndexChanged += (s, e) =>
             {
-                DebtDirectionPicker.IsVisible = TypePicker.SelectedItem?.ToString() == "Долг";
+                bool isDebt = TypePicker.SelectedItem?.ToString() == "Долг";
+
+                // Показываем/скрываем соответствующие пикеры
+                CategoryPicker.IsVisible = !isDebt;
+                DebtDirectionPicker.IsVisible = isDebt;
+
+                // Сбрасываем выбор при переключении
+                if (isDebt)
+                {
+                    CategoryPicker.SelectedIndex = -1;
+                }
+                else
+                {
+                    DebtDirectionPicker.SelectedIndex = -1;
+                }
             };
 
 
@@ -58,82 +72,12 @@ namespace Mauixui.Views
 
         private void RenderAssets()
         {
-            AssetsList.Children.Clear();
-
-            if (_assets == null || _assets.Count == 0)
-            {
-                AssetsList.Children.Add(new Label { Text = "Активов нет", TextColor = Color.FromArgb("#888888"), HorizontalOptions = LayoutOptions.Center });
-                return;
-            }
-
-            foreach (var a in _assets.OrderByDescending(x => x.DateAcquired))
-            {
-                var frame = new Frame { BackgroundColor = Color.FromArgb("#2D2D30"), CornerRadius = 10, Padding = 10, Margin = new Thickness(0, 0, 0, 4) };
-                var stack = new VerticalStackLayout { Spacing = 4 };
-
-                stack.Children.Add(new Label { Text = a.Name, TextColor = Color.FromArgb("#FFFFFF"), FontSize = 16, FontAttributes = FontAttributes.Bold });
-                stack.Children.Add(new Label { Text = $"{a.Category} • {a.DateAcquired:dd.MM.yyyy}", TextColor = Color.FromArgb("#BBBBBB"), FontSize = 12 });
-                stack.Children.Add(new Label { Text = $"{a.Value:F2} Br", TextColor = Color.FromArgb("#23D160"), FontSize = 14 });
-
-                var h = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.End };
-                var editBtn = new Button { Text = "Изм.", BackgroundColor = Color.FromArgb("#40444B"), TextColor = Color.FromArgb("#FFFFFF"), CornerRadius = 8, CommandParameter = a };
-                var delBtn = new Button { Text = "Удал.", BackgroundColor = Color.FromArgb("#8B0000"), TextColor = Color.FromArgb("#FFFFFF"), CornerRadius = 8, CommandParameter = a };
-
-                editBtn.Clicked += EditAssetClicked;
-                delBtn.Clicked += DeleteAssetClicked;
-
-                h.Children.Add(editBtn);
-                h.Children.Add(delBtn);
-
-                stack.Children.Add(h);
-                frame.Content = stack;
-                AssetsList.Children.Add(frame);
-            }
+            AssetsCollectionView.ItemsSource = _assets?.OrderByDescending(x => x.DateAcquired).ToList();
         }
 
         private void RenderDebts()
         {
-            DebtsList.Children.Clear();
-
-            if (_debts == null || _debts.Count == 0)
-            {
-                DebtsList.Children.Add(new Label { Text = "Долгов нет", TextColor = Color.FromArgb("#888888"), HorizontalOptions = LayoutOptions.Center });
-                return;
-            }
-
-            foreach (var d in _debts.OrderBy(x => x.DueDate))
-            {
-                var frame = new Frame { BackgroundColor = Color.FromArgb("#2D2D30"), CornerRadius = 10, Padding = 10, Margin = new Thickness(0, 0, 0, 4) };
-                var stack = new VerticalStackLayout { Spacing = 4 };
-
-                stack.Children.Add(new Label
-                {
-                    Text = $"{d.Party} • {d.Direction}",
-                    TextColor = Color.FromArgb("#FFFFFF"),
-                    FontSize = 15,
-                    FontAttributes = FontAttributes.Bold
-                });
-
-                stack.Children.Add(new Label { Text = $"{d.Party} • {d.Type}", TextColor = Color.FromArgb("#FFFFFF"), FontSize = 15, FontAttributes = FontAttributes.Bold });
-                stack.Children.Add(new Label { Text = $"Сумма: {d.Amount:F2} Br  •  Срок: {d.DueDate:dd.MM.yyyy}", TextColor = Color.FromArgb("#BBBBBB"), FontSize = 12 });
-                if (d.InterestPercent > 0)
-                    stack.Children.Add(new Label { Text = $"Процент: {d.InterestPercent:F2} %", TextColor = Color.FromArgb("#BBBBBB"), FontSize = 12 });
-
-                var h = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.End };
-                var editBtn = new Button { Text = "Изм.", BackgroundColor = Color.FromArgb("#40444B"), TextColor = Color.FromArgb("#FFFFFF"), CornerRadius = 8, CommandParameter = d };
-                var delBtn = new Button { Text = "Удал.", BackgroundColor = Color.FromArgb("#8B0000"), TextColor = Color.FromArgb("#FFFFFF"), CornerRadius = 8, CommandParameter = d };
-
-                editBtn.Clicked += EditDebtClicked;
-                delBtn.Clicked += DeleteDebtClicked;
-
-                h.Children.Add(editBtn);
-                h.Children.Add(delBtn);
-
-                stack.Children.Add(h);
-
-                frame.Content = stack;
-                DebtsList.Children.Add(frame);
-            }
+            DebtsCollectionView.ItemsSource = _debts?.OrderBy(x => x.DueDate).ToList();
         }
 
         private void RecalculateTotals()
@@ -213,7 +157,7 @@ namespace Mauixui.Views
                 {
                     ProfileId = _profileId,
                     Party = string.IsNullOrWhiteSpace(NameEntry.Text) ? "Не указано" : NameEntry.Text,
-                    Type = CategoryPicker.SelectedItem?.ToString() ?? "Долг",
+                    Type = "Долг", // Фиксированное значение для долгов
                     Amount = value,
                     DueDate = DatePicker.Date,
                     InterestPercent = pct,
