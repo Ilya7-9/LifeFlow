@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mauixui.Views.ProfileView">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- Основная информация профиля -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#F0F0F0, Dark=#2D2D30}" 
+                   CornerRadius="15" Padding="20">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+
+                    <Label x:Name="ProfileAvatarLabel" 
+                           Text="👤" 
+                           FontSize="40"
+                           VerticalOptions="Center"/>
+
+                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                        <Label x:Name="ProfileNameLabel" 
+                               Text="Имя пользователя" 
+                               FontSize="18" 
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+                        <Label x:Name="ProfileEmailLabel"
+                               Text="email@example.com" 
+                               FontSize="14"
+                               TextColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+                        <Label x:Name="ProfileCreatedLabel"
+                               Text="Создан: ..." 
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+                    </VerticalStackLayout>
+
+                    <Button Grid.Column="2"
+                            Text="✏️" 
+                            BackgroundColor="Transparent"
+                            FontSize="20"
+                            Clicked="OnEditProfileClicked"/>
+                </Grid>
+            </Frame>
+
+            <!-- Финансы -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#E8F5E8, Dark=#1B5E20}" 
+                   CornerRadius="15" Padding="15">
+                <VerticalStackLayout>
+                    <Label Text="💰 Финансы" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+
+                        <Frame BackgroundColor="#4CAF50" CornerRadius="10" Padding="12">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                                <Label Text="📈" FontSize="16" HorizontalOptions="Center"/>
+                                <Label x:Name="IncomeLabel" Text="0₽" FontSize="14" FontAttributes="Bold" 
+                                       HorizontalOptions="Center" TextColor="White"/>
+                                <Label Text="Доходы" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <Frame BackgroundColor="#F44336" CornerRadius="10" Padding="12" Grid.Column="1">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                                <Label Text="📉" FontSize="16" HorizontalOptions="Center"/>
+                                <Label x:Name="ExpensesLabel" Text="0₽" FontSize="14" FontAttributes="Bold" 
+                                       HorizontalOptions="Center" TextColor="White"/>
+                                <Label Text="Расходы" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                            </VerticalStackLayout>
+                        </Frame>
+
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,5,0,0">
+
+                        <Frame BackgroundColor="#2196F3" CornerRadius="10" Padding="12">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                                <Label Text="💼" FontSize="16" HorizontalOptions="Center"/>
+                                <Label x:Name="AssetsLabel" Text="0₽" FontSize="14" FontAttributes="Bold" 
+                                       HorizontalOptions="Center" TextColor="White"/>
+                                <Label Text="Активы" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <Frame BackgroundColor="#FF9800" CornerRadius="10" Padding="12" Grid.Column="1">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                                <Label Text="⚖️" FontSize="16" HorizontalOptions="Center"/>
+                                <Label x:Name="NetWorthLabel" Text="0₽" FontSize="14" FontAttributes="Bold" 
+                                       HorizontalOptions="Center" TextColor="White"/>
+                                <Label Text="Капитал" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                            </VerticalStackLayout>
+                        </Frame>
+
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Трекер активности -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#0D47A1}" 
+                   CornerRadius="15" Padding="15">
+                <VerticalStackLayout>
+                    <Label Text="⏱️ Трекер активности" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+
+                        <Frame BackgroundColor="#9C27B0" CornerRadius="10" Padding="12">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                                <Label Text="📊" FontSize="16" HorizontalOptions="Center"/>
+                                <Label x:Name="ProductivityLabel" Text="0%" FontSize="14" FontAttributes="Bold" 
+                                       HorizontalOptions="Center" TextColor="White"/>
+                                <Label Text="Продуктивность" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <Frame BackgroundColor="#607D8B" CornerRadius="10" Padding="12" Grid.Column="1">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                                <Label Text="📱" FontSize="16" HorizontalOptions="Center"/>
+                                <Label x:Name="TopAppLabel" Text="-" FontSize="12" FontAttributes="Bold" 
+                                       HorizontalOptions="Center" TextColor="White"/>
+                                <Label Text="Топ приложение" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                            </VerticalStackLayout>
+                        </Frame>
+
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,5,0,0">
+
+                        <Frame BackgroundColor="#795548" CornerRadius="10" Padding="12">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                                <Label Text="🌐" FontSize="16" HorizontalOptions="Center"/>
+                                <Label x:Name="TopSiteLabel" Text="-" FontSize="12" FontAttributes="Bold" 
+                                       HorizontalOptions="Center" TextColor="White"/>
+                                <Label Text="Топ сайт" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <Frame BackgroundColor="#FF5722" CornerRadius="10" Padding="12" Grid.Column="1">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="5">
+                                <Label Text="⏰" FontSize="16" HorizontalOptions="Center"/>
+                                <Label x:Name="TodayTimeLabel" Text="0с" FontSize="14" FontAttributes="Bold" 
+                                       HorizontalOptions="Center" TextColor="White"/>
+                                <Label Text="Сегодня" FontSize="10" HorizontalOptions="Center" TextColor="White"/>
+                            </VerticalStackLayout>
+                        </Frame>
+
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Настройки -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#1E1E1E}" 
+                   CornerRadius="15" Padding="0">
+                <VerticalStackLayout Spacing="0">
+
+                    <!-- Безопасность -->
+                    <Grid ColumnDefinitions="*,Auto" 
+                          Padding="15"
+                          BackgroundColor="Transparent">
+                        <VerticalStackLayout Grid.Column="0">
+                            <Label Text="🔒 Безопасность" 
+                                   FontSize="14" 
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+                            <Label Text="Смена пароля" 
+                                   FontSize="12"
+                                   TextColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Text="Изменить" 
+                                BackgroundColor="Transparent"
+                                TextColor="#2196F3"
+                                FontSize="12"
+                                Clicked="OnChangePasswordClicked"/>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" 
+                             BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#404040}"/>
+
+                    <!-- Тема -->
+                    <Grid ColumnDefinitions="*,Auto" 
+                          Padding="15"
+                          BackgroundColor="Transparent">
+                        <VerticalStackLayout Grid.Column="0">
+                            <Label Text="🎨 Тема приложения" 
+                                   FontSize="14" 
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+                            <Label Text="Светлая/Тёмная" 
+                                   FontSize="12"
+                                   TextColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Text="Сменить" 
+                                BackgroundColor="Transparent"
+                                TextColor="#2196F3"
+                                FontSize="12"
+                                Clicked="OnChangeThemeClicked"/>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" 
+                             BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#404040}"/>
+
+                    <!-- Уведомления -->
+                    <Grid ColumnDefinitions="*,Auto" 
+                          Padding="15"
+                          BackgroundColor="Transparent">
+                        <VerticalStackLayout Grid.Column="0">
+                            <Label Text="🔔 Уведомления" 
+                                   FontSize="14" 
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+                            <Label Text="Финансы и активность" 
+                                   FontSize="12"
+                                   TextColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Text="Инфо" 
+                                BackgroundColor="Transparent"
+                                TextColor="#2196F3"
+                                FontSize="12"
+                                Clicked="OnNotificationsInfoClicked"/>
+                    </Grid>
+
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Действия -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#1E1E1E}" 
+                   CornerRadius="15" Padding="0">
+                <VerticalStackLayout Spacing="0">
+
+                    <Button Text="📤 Экспорт данных" 
+                            BackgroundColor="Transparent"
+                            TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                            Clicked="OnExportDataClicked"
+                            HorizontalOptions="FillAndExpand"/>
+
+                    <BoxView HeightRequest="1" 
+                             BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#404040}"/>
+
+                    <Button Text="🚪 Выйти из аккаунта" 
+                            BackgroundColor="Transparent"
+                            TextColor="#2196F3"
+                            Clicked="OnLogoutClicked"
+                            HorizontalOptions="FillAndExpand"/>
+
+                    <BoxView HeightRequest="1" 
+                             BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#404040}"/>
+
+                    <Button Text="🗑️ Удалить аккаунт" 
+                            BackgroundColor="Transparent"
+                            TextColor="#F44336"
+                            Clicked="OnDeleteAccountClicked"
+                            HorizontalOptions="FillAndExpand"/>
+
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentView>

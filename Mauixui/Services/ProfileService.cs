@@ -9,6 +9,28 @@ namespace Mauixui.Services
 {
     public partial class ProfileService
     {
+        // ДОБАВИМ МЕТОД ДЛЯ ТРЕКЕРА
+        public TrackerDatabase GetTrackerDatabase(string profileId)
+        {
+            var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_tracker.db3");
+            return new TrackerDatabase(path);
+        }
+
+        // Остальные методы остаются...
+        public void AddProfile(UserProfile profile)
+        {
+            try
+            {
+                var profiles = GetProfiles();
+                profiles.Add(profile);
+                SaveProfiles(profiles);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка добавления профиля: {ex.Message}");
+            }
+        }
+
         private string _currentProfileId;
 
         public ProfileService()
@@ -16,7 +38,6 @@ namespace Mauixui.Services
             _currentProfileId = Preferences.Get("current_profile_id", "");
         }
 
-        // ОСНОВНОЙ МЕТОД ОБНОВЛЕНИЯ СТАТИСТИКИ
         public async Task UpdateAllProfilesStatsAsync()
         {
             try
@@ -34,15 +55,11 @@ namespace Mauixui.Services
             }
         }
 
-        // МЕТОД ОБНОВЛЕНИЯ СТАТИСТИКИ КОНКРЕТНОГО ПРОФИЛЯ
         public async Task UpdateProfileStatistics(UserProfile profile)
         {
             try
             {
-                // Временное решение для времени
                 var trackedTime = TimeSpan.Zero;
-
-                // Обновляем ghjabkm 
                 profile.TotalTrackedTime = trackedTime;
             }
             catch (Exception ex)
@@ -51,7 +68,6 @@ namespace Mauixui.Services
             }
         }
 
-        // МЕТОД СОХРАНЕНИЯ СПИСКА ПРОФИЛЕЙ
         private void SaveProfiles(List<UserProfile> profiles)
         {
             try
@@ -72,7 +88,6 @@ namespace Mauixui.Services
                 var json = Preferences.Get("user_profiles", "[]");
                 var profiles = System.Text.Json.JsonSerializer.Deserialize<List<UserProfile>>(json) ?? new List<UserProfile>();
 
-                // Если профилей нет, создаем дефолтный
                 if (!profiles.Any())
                 {
                     var defaultProfile = new UserProfile
@@ -150,7 +165,6 @@ namespace Mauixui.Services
                 profiles.Remove(profile);
                 SaveProfiles(profiles);
 
-                // Если удаляем текущий профиль, переключаемся на первый
                 if (_currentProfileId == profileId)
                 {
                     _currentProfileId = profiles.FirstOrDefault()?.Id ?? "";
@@ -182,12 +196,12 @@ namespace Mauixui.Services
             var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_assets.db3");
             return new AssetDatabase(path);
         }
+
         public DebtDatabase GetDebtDatabase(string profileId)
         {
             var path = Path.Combine("D:/Шарага/С#/db", $"{profileId}_debts.db3");
             return new DebtDatabase(path);
         }
-
 
         public void UpdateProfileStatistics(int tasksCount, int notesCount, TimeSpan trackedTime)
         {
@@ -200,6 +214,5 @@ namespace Mauixui.Services
                 UpdateProfile(profile);
             }
         }
-
     }
 }

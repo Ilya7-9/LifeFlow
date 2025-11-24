@@ -253,7 +253,7 @@ namespace Mauixui.Views
             var list = listOverride ?? _items;
             FinanceList.Children.Clear();
 
-            if (!list.Any())
+            if (!list.Any()) 
             {
                 FinanceList.Children.Add(new Label
                 {

@@ -17,28 +17,33 @@ namespace Mauixui.Services
             _profileService = profileService;
         }
 
+        // СДЕЛАЕМ МЕТОД ПУБЛИЧНЫМ
+        public string HashPassword(string password)
+        {
+            using var sha256 = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes(password);
+            var hash = sha256.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
+        }
+
+        // Остальные методы без изменений...
         public (bool success, string message) Register(string email, string password, string name, string avatar = "👤")
         {
             try
             {
-                // Проверка email
                 if (string.IsNullOrWhiteSpace(email) || !email.Contains("@"))
                     return (false, "Некорректный email");
 
-                // Проверка пароля
                 if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
                     return (false, "Пароль должен содержать минимум 6 символов");
 
-                // Проверка имени
                 if (string.IsNullOrWhiteSpace(name))
                     return (false, "Имя не может быть пустым");
 
-                // Проверка существования пользователя
                 var profiles = _profileService.GetProfiles();
                 if (profiles.Any(p => p.Email?.ToLower() == email.ToLower()))
                     return (false, "Пользователь с таким email уже существует");
 
-                // Создание профиля
                 var profile = new UserProfile
                 {
                     Email = email.Trim().ToLower(),
@@ -76,7 +81,6 @@ namespace Mauixui.Services
                 if (!VerifyPassword(password, profile.PasswordHash))
                     return (false, "Неверный пароль", null);
 
-                // Обновляем время последнего входа
                 profile.LastLogin = DateTime.Now;
                 _profileService.UpdateProfile(profile);
                 _profileService.SetCurrentProfile(profile);
@@ -110,14 +114,6 @@ namespace Mauixui.Services
             {
                 return (false, $"Ошибка смены пароля: {ex.Message}");
             }
-        }
-
-        private string HashPassword(string password)
-        {
-            using var sha256 = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
         }
 
         private bool VerifyPassword(string password, string storedHash)

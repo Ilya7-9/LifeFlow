@@ -23,7 +23,7 @@ namespace Mauixui
             _currentActiveButton = HomeButton;
             SetActiveButton(HomeButton);
 
-            LoadView(new HomeView());
+            LoadView(new ProfileView());
             LoadProfileSettings();
         }
 
@@ -76,13 +76,13 @@ namespace Mauixui
         private void OnHomeClicked(object sender, EventArgs e)
         {
             SetActiveButton(HomeButton);
-            LoadView(new HomeView());
+            LoadView(new ProfileView());
         }
 
-        //private void OnTasksClicked(object sender, EventArgs e)
+        //private void OnProfileClicked(object sender, EventArgs e)
         //{
-        //    SetActiveButton(TasksButton);
-        //    LoadView(new TasksView());
+        //    SetActiveButton(ProfileButton);
+        //    LoadView(new ProfileView());
         //}
 
         private void OnFinanceClicked(object sender, EventArgs e)
@@ -143,9 +143,9 @@ namespace Mauixui
                     RefreshProfileInfo();
 
                     if (_currentActiveButton == HomeButton)
-                        LoadView(new HomeView());
-                    //else if (_currentActiveButton == TasksButton)
-                    //    LoadView(new TasksView());
+                        LoadView(new ProfileView());
+                    //else if (_currentActiveButton == ProfileButton)
+                    //    LoadView(new ProfileView());
                     else if (_currentActiveButton == FinanceButton)
                         LoadView(new FinanceView());
                     else if (_currentActiveButton == TrackButton)

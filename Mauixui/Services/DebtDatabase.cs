@@ -22,6 +22,19 @@ namespace Mauixui.Services
                 .OrderBy(d => d.DueDate)
                 .ToListAsync();
         }
+        public Task<List<DebtItem>> GetItemsAsync()
+        {
+            return _db.Table<DebtItem>().ToListAsync();
+        }
+
+        // Метод с фильтрацией по profileId
+        public Task<List<DebtItem>> GetItemsByProfileAsync(string profileId)
+        {
+            return _db.Table<DebtItem>()
+                .Where(x => x.ProfileId == profileId)
+                .ToListAsync();
+        }
+
 
         public Task<int> SaveDebtAsync(DebtItem item)
         {

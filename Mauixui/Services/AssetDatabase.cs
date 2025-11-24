@@ -23,6 +23,19 @@ namespace Mauixui.Services
                 .OrderByDescending(a => a.DateAcquired)
                 .ToListAsync();
         }
+        // Базовый метод без параметров
+        public Task<List<AssetItem>> GetItemsAsync()
+        {
+            return _db.Table<AssetItem>().ToListAsync();
+        }
+
+        // Метод с фильтрацией по profileId
+        public Task<List<AssetItem>> GetItemsByProfileAsync(string profileId)
+        {
+            return _db.Table<AssetItem>()
+                .Where(x => x.ProfileId == profileId)
+                .ToListAsync();
+        }
 
         public Task<int> SaveAssetAsync(AssetItem item)
         {

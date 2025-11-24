@@ -15,12 +15,26 @@ namespace Mauixui.Services
             _db.CreateTableAsync<FinanceItem>().Wait();
         }
 
+        // Метод без параметров
+        public Task<List<FinanceItem>> GetItemsAsync()
+        {
+            return _db.Table<FinanceItem>().ToListAsync();
+        }
+
+        // Перегрузка с параметром profileId
         public Task<List<FinanceItem>> GetItemsAsync(string profileId)
         {
             return _db.Table<FinanceItem>()
-                      .Where(x => x.ProfileId == profileId)
-                      .OrderByDescending(x => x.Date)
-                      .ToListAsync();
+                .Where(x => x.ProfileId == profileId)
+                .ToListAsync();
+        }
+
+        // Метод с фильтрацией по profileId
+        public Task<List<FinanceItem>> GetItemsByProfileAsync(string profileId)
+        {
+            return _db.Table<FinanceItem>()
+                .Where(x => x.ProfileId == profileId)
+                .ToListAsync();
         }
 
         public Task<int> SaveItemAsync(FinanceItem item)

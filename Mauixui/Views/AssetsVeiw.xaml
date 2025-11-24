@@ -129,7 +129,7 @@
                         </VerticalStackLayout>
                     </Frame>
                 </DataTemplate>
-            </CollectionView.ItemTemplate> DebtsCollectionView
+            </CollectionView.ItemTemplate>
         </CollectionView>
 
     </VerticalStackLayout>

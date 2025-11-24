@@ -49,7 +49,17 @@
                         HeightRequest="100"
                         CornerRadius="10"
                         TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
-            </VerticalStackLayout>
+
+                <!-- <Button x:Name="ProfileButton"
+                        Text="👤"
+                        BorderWidth="0"
+                        Clicked="OnProfileClicked"
+                        BackgroundColor="{StaticResource Transparent}"
+                        FontSize="62"
+                        HeightRequest="100"
+                        CornerRadius="10"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/> -->
+            </VerticalStackLayout> 
 
             <!-- Нижняя часть (профиль и настройки) -->
             <VerticalStackLayout Grid.Row="2"
