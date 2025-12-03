@@ -16,12 +16,14 @@ namespace Mauixui.Views
         private AuthService _authService;
         private System.Timers.Timer _refreshTimer;
         private UserProfile _currentProfile;
+        private readonly CredentialsService _credentialsService;
 
         public ProfileView()
         {
             InitializeComponent();
             _profileService = new ProfileService();
             _authService = new AuthService(_profileService);
+            _credentialsService = new CredentialsService();
 
             LoadProfileData();
             SetupRefreshTimer();
@@ -159,18 +161,27 @@ namespace Mauixui.Views
             }
         }
 
-        private void LoadProfileData()
+        private async void LoadProfileData()
         {
             try
             {
                 _currentProfile = _profileService.GetCurrentProfile();
                 if (_currentProfile == null) return;
 
+                // Получаем email из credentials
+                var credentials = await _credentialsService.GetCredentialsAsync(_currentProfile.Id);
+                var emailFromCredentials = credentials?.Email;
+
                 Device.BeginInvokeOnMainThread(() =>
                 {
                     ProfileNameLabel.Text = _currentProfile.Name ?? "Без имени";
                     ProfileAvatarLabel.Text = _currentProfile.Avatar ?? "👤";
-                    ProfileEmailLabel.Text = _currentProfile.Email ?? "Email не указан";
+
+                    // Показываем email из credentials, если есть, иначе из профиля
+                    ProfileEmailLabel.Text = !string.IsNullOrEmpty(emailFromCredentials)
+                        ? emailFromCredentials
+                        : _currentProfile.Email ?? "Email не указан";
+
                     ProfileCreatedLabel.Text = $"Создан: {_currentProfile.CreatedAt:dd.MM.yyyy}";
                     UpdateAppTheme();
                 });
@@ -210,7 +221,7 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
             if (_currentProfile == null) return;
 
             var action = await DisplayActionSheet("Редактировать профиль", "Отмена", null,
-                "Изменить имя", "Сменить аватар", "Изменить email");
+                "Изменить имя", "Сменить аватар");
 
             switch (action)
             {
@@ -220,9 +231,9 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
                 case "Сменить аватар":
                     await ChangeProfileAvatar();
                     break;
-                case "Изменить email":
-                    await ChangeProfileEmail();
-                    break;
+                //case "Изменить email":
+                //    await ChangeProfileEmail();
+                //    break;
             }
         }
 
@@ -278,60 +289,74 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
         {
             if (_currentProfile == null) return;
 
-            // Проверяем, установлен ли пароль
-            var hasPassword = !string.IsNullOrEmpty(_currentProfile.PasswordHash);
-
-            if (hasPassword)
+            try
             {
-                // Если пароль уже установлен - просим старый пароль
-                var currentPassword = await DisplayPromptAsync("Смена пароля",
-                    "Введите текущий пароль:", "Продолжить", "Отмена");
+                // Получаем учетные данные текущего профиля
+                var credentials = await _credentialsService.GetCredentialsAsync(_currentProfile.Id);
+                var hasPassword = credentials != null && !string.IsNullOrEmpty(credentials.PasswordHash);
 
-                if (string.IsNullOrWhiteSpace(currentPassword)) return;
-
-                // Проверяем старый пароль
-                var loginResult = _authService.Login(_currentProfile.Email, currentPassword);
-                if (!loginResult.success)
+                if (hasPassword)
                 {
-                    await DisplayAlert("Ошибка", "Неверный текущий пароль", "OK");
+                    // Если пароль уже установлен - просим старый пароль
+                    var currentPassword = await DisplayPromptAsync("Смена пароля",
+                        "Введите текущий пароль:", "Продолжить", "Отмена");
+
+                    if (string.IsNullOrWhiteSpace(currentPassword)) return;
+
+                    // Проверяем старый пароль напрямую через credentials
+                    if (credentials.PasswordHash != currentPassword)
+                    {
+                        await DisplayAlert("Ошибка", "Неверный текущий пароль", "OK");
+                        return;
+                    }
+                }
+                else
+                {
+                    // Если пароля нет - просто переходим к установке нового
+                    await DisplayAlert("Установка пароля",
+                        "Установите пароль для защиты вашего аккаунта", "OK");
+                }
+
+                // Запрос нового пароля
+                var newPassword = await DisplayPromptAsync("Смена пароля",
+                    "Введите новый пароль:", "Продолжить", "Отмена");
+
+                if (string.IsNullOrWhiteSpace(newPassword)) return;
+
+                if (newPassword.Length < 6)
+                {
+                    await DisplayAlert("Ошибка", "Пароль должен содержать минимум 6 символов", "OK");
                     return;
                 }
+
+                var confirmPassword = await DisplayPromptAsync("Смена пароля",
+                    "Подтвердите новый пароль:", "Сменить", "Отмена");
+
+                if (string.IsNullOrWhiteSpace(confirmPassword)) return;
+
+                if (newPassword != confirmPassword)
+                {
+                    await DisplayAlert("Ошибка", "Пароли не совпадают", "OK");
+                    return;
+                }
+
+                // Сохраняем новый пароль через CredentialsService
+                var email = credentials?.Email ?? ""; // Берем email из существующих credentials или пустую строку
+                var success = await _credentialsService.SaveCredentialsAsync(_currentProfile.Id, email, newPassword);
+
+                if (success)
+                {
+                    await DisplayAlert("Успех", "Пароль успешно " + (hasPassword ? "изменен" : "установлен"), "OK");
+                }
+                else
+                {
+                    await DisplayAlert("Ошибка", "Не удалось сохранить пароль", "OK");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // Если пароля нет - просто переходим к установке нового
-                await DisplayAlert("Установка пароля",
-                    "Установите пароль для защиты вашего аккаунта", "OK");
+                await DisplayAlert("Ошибка", $"Ошибка при смене пароля: {ex.Message}", "OK");
             }
-
-            // Запрос нового пароля
-            var newPassword = await DisplayPromptAsync("Смена пароля",
-                "Введите новый пароль:", "Продолжить", "Отмена");
-
-            if (string.IsNullOrWhiteSpace(newPassword)) return;
-
-            if (newPassword.Length < 6)
-            {
-                await DisplayAlert("Ошибка", "Пароль должен содержать минимум 6 символов", "OK");
-                return;
-            }
-
-            var confirmPassword = await DisplayPromptAsync("Смена пароля",
-                "Подтвердите новый пароль:", "Сменить", "Отмена");
-
-            if (string.IsNullOrWhiteSpace(confirmPassword)) return;
-
-            if (newPassword != confirmPassword)
-            {
-                await DisplayAlert("Ошибка", "Пароли не совпадают", "OK");
-                return;
-            }
-
-            // Устанавливаем новый пароль
-            _currentProfile.PasswordHash = _authService.HashPassword(newPassword);
-            _profileService.UpdateProfile(_currentProfile);
-
-            await DisplayAlert("Успех", "Пароль успешно " + (hasPassword ? "изменен" : "установлен"), "OK");
         }
 
         // СМЕНА ЦВЕТА АКЦЕНТА
@@ -418,12 +443,15 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
         private async void OnLogoutClicked(object sender, EventArgs e)
         {
             var confirm = await DisplayAlert("Выход",
-                "Вы уверены, что хотите выйти из аккаунта?", "Выйти", "Отмена");
+                "Вы уверены, что хотите выйти из профиля?", "Выйти", "Отмена");
 
             if (confirm)
             {
                 _authService.Logout();
-                await DisplayAlert("Успех", "Вы вышли из аккаунта", "OK");
+
+                // Возвращаемся к выбору профиля
+                Application.Current.MainPage = new NavigationPage(
+                    new ProfileSelectionPage(_authService, _profileService));
             }
         }
 
@@ -453,6 +481,55 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
                         await DisplayAlert("Ошибка", "Неверный пароль", "OK");
                     }
                 }
+            }
+        }
+
+        // ПРИВЯЗКА EMAIL К ПРОФИЛЮ
+        private async void OnBindEmailClicked(object sender, EventArgs e)
+        {
+            if (_currentProfile == null) return;
+
+            try
+            {
+                var email = await DisplayPromptAsync("Привязка email",
+            "Введите email для привязки к профилю:", "Привязать", "Отмена");
+
+                if (string.IsNullOrWhiteSpace(email)) return;
+
+                if (!email.Contains("@"))
+                {
+                    await DisplayAlert("Ошибка", "Введите корректный email адрес", "OK");
+                    return;
+                }
+
+                // Проверяем, не используется ли email другим профилем
+                var existingCredentials = await _credentialsService.GetCredentialsByEmailAsync(email);
+                if (existingCredentials != null && existingCredentials.ProfileId != _currentProfile.Id)
+                {
+                    await DisplayAlert("Ошибка", "Этот email уже используется другим профилем", "OK");
+                    return;
+                }
+
+                // Получаем текущие учетные данные или создаем новые
+                var currentCredentials = await _credentialsService.GetCredentialsAsync(_currentProfile.Id);
+                var currentPassword = currentCredentials?.PasswordHash ?? "";
+
+                // Сохраняем с новым email
+                var success = await _credentialsService.SaveCredentialsAsync(_currentProfile.Id, email, currentPassword);
+
+                if (success)
+                {
+                    await DisplayAlert("Успех", "Email успешно привязан к профилю", "OK");
+                    LoadProfileData(); // Обновляем отображение
+                }
+                else
+                {
+                    await DisplayAlert("Ошибка", "Не удалось привязать email", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Ошибка", $"Ошибка при привязке email: {ex.Message}", "OK");
             }
         }
 

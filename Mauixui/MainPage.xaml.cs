@@ -43,10 +43,9 @@ namespace Mauixui
         private void RefreshProfileInfo()
         {
             _currentProfile = _profileService.GetCurrentProfile();
-
-            ProfileAvatarLabel.Text = _currentProfile.Avatar;
-            ProfileNameLabel.Text = _currentProfile.Name;
-            ProfileStatsLabel.Text = $"Задачи: {_currentProfile.TotalTasks} | Заметки: {_currentProfile.TotalNotes}";
+            //ProfileAvatarLabel.Text = _currentProfile.Avatar;
+            //ProfileNameLabel.Text = _currentProfile.Name;
+            //ProfileStatsLabel.Text = $"Задачи: {_currentProfile.TotalTasks} | Заметки: {_currentProfile.TotalNotes}";
 
             UpdateButtonColors();
         }
@@ -320,6 +319,53 @@ namespace Mauixui
         {
             var currentActive = _currentActiveButton;
             SetActiveButton(currentActive);
+        }
+
+        // Вспомогательные функции
+
+        private async void OnCreateTestUser(object sender, EventArgs e)
+        {
+            try
+            {
+                var profileService = new ProfileService();
+                var authService = new AuthService(profileService);
+
+                // Проверяем, есть ли уже пользователи с email
+                var profiles = profileService.GetProfiles();
+                var existingUser = profiles.FirstOrDefault(p => !string.IsNullOrEmpty(p.Email));
+
+                if (existingUser != null)
+                {
+                    await DisplayAlert("Информация",
+                        $"Уже есть пользователь:\nEmail: {existingUser.Email}\nПароль: {existingUser.PasswordHash}", "OK");
+                    return;
+                }
+
+                // Создаем нового тестового пользователя
+                var testProfile = new UserProfile
+                {
+                    Name = "Тестовый Пользователь",
+                    Email = "test@mail.ru",
+                    PasswordHash = "123456",
+                    Avatar = "👤",
+                    CreatedAt = DateTime.Now,
+                    LastLogin = DateTime.Now,
+                    IsActive = true
+                };
+
+                profileService.AddProfile(testProfile);
+                profileService.SetCurrentProfile(testProfile);
+
+                await DisplayAlert("Успех",
+                    "Тестовый пользователь создан!\n\n" +
+                    "📧 Email: test@mail.ru\n" +
+                    "🔑 Пароль: 123456\n\n" +
+                    "Используйте эти данные для входа.", "OK");
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Ошибка", ex.Message, "OK");
+            }
         }
     }
 }

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Mauixui.Views.RegisterPage"
+             Title="Создание профиля"
+             BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1E1E1E}">
+
+    <ScrollView>
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+              RowSpacing="15"
+              Padding="30"
+              VerticalOptions="Center">
+
+            <Label Grid.Row="0"
+                   Text="👤 Создание профиля"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"/>
+
+            <!-- Имя -->
+            <Entry x:Name="NameEntry"
+                   Grid.Row="1"
+                   Placeholder="Имя профиля"
+                   TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                   PlaceholderColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+
+            <!-- Email -->
+            <Entry x:Name="EmailEntry"
+                   Grid.Row="2"
+                   Placeholder="Email (необязательно)"
+                   Keyboard="Email"
+                   TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                   PlaceholderColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+
+            <!-- Пароль -->
+            <Entry x:Name="PasswordEntry"
+                   Grid.Row="3"
+                   Placeholder="Пароль (минимум 6 символов)"
+                   IsPassword="True"
+                   TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                   PlaceholderColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+
+            <!-- Подтверждение пароля -->
+            <Entry x:Name="ConfirmPasswordEntry"
+                   Grid.Row="4"
+                   Placeholder="Подтвердите пароль"
+                   IsPassword="True"
+                   TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                   PlaceholderColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"/>
+
+            <!-- Аватар -->
+            <Button Grid.Row="5"
+                    x:Name="AvatarButton"
+                    Text="👤 Выбрать аватар"
+                    BackgroundColor="Transparent"
+                    TextColor="#5865F2"
+                    Clicked="OnSelectAvatarClicked"/>
+
+            <!-- Кнопка создания -->
+            <Button Grid.Row="6"
+                    Text="Создать профиль"
+                    BackgroundColor="#5865F2"
+                    TextColor="White"
+                    CornerRadius="10"
+                    HeightRequest="50"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    Clicked="OnCreateProfileClicked"/>
+
+        </Grid>
+    </ScrollView>
+</ContentPage>
