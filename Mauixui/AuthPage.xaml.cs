@@ -92,7 +92,7 @@ namespace Mauixui.Views
         private async void NavigateToMainApp()
         {
             // Переходим на главную страницу приложения
-            await Navigation.PushAsync(new MainPage());
+            Application.Current.MainPage = new MainPage();
 
             // Удаляем страницу авторизации из стека навигации
             if (Navigation.NavigationStack.Count > 1)

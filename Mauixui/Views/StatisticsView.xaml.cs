@@ -10,7 +10,7 @@ namespace Mauixui.Views
 {
     public partial class StatisticsView : ContentView
     {
-        private FinanceDatabase _db;
+        private MainDatabase _db;
         private string _profileId;
         private List<FinanceItem> _items = new();
 
@@ -19,7 +19,7 @@ namespace Mauixui.Views
             InitializeComponent();
             var ps = new ProfileService();
             _profileId = ps.GetCurrentProfile().Id;
-            _db = ps.GetFinanceDatabase(_profileId);
+            _db = MainDatabase.Instance;
 
             PeriodPicker.SelectedIndexChanged += OnPeriodChanged;
             PeriodPicker.SelectedIndex = 0;

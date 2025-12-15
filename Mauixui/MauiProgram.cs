@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microcharts.Maui;
+using SQLitePCL;
 
 namespace Mauixui
 {
@@ -7,6 +8,8 @@ namespace Mauixui
     {
         public static MauiApp CreateMauiApp()
         {
+            Batteries.Init();
+
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()

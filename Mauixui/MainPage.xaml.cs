@@ -1,9 +1,11 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 using Mauixui.Views;
 using Mauixui.Models;
 using Mauixui.Services;
+using System.Diagnostics;
 
 namespace Mauixui
 {
@@ -12,48 +14,230 @@ namespace Mauixui
         private Button _currentActiveButton;
         private ProfileService _profileService;
         private UserProfile _currentProfile;
+        private bool _isInitialized = false;
 
         public MainPage()
         {
             InitializeComponent();
-
-            _profileService = new ProfileService();
-            _currentProfile = _profileService.GetCurrentProfile();
-
-            _currentActiveButton = HomeButton;
-            SetActiveButton(HomeButton);
-
-            LoadView(new ProfileView());
-            LoadProfileSettings();
         }
 
-        protected override void OnAppearing()
+        protected override async void OnAppearing()
         {
             base.OnAppearing();
-            RefreshProfileInfo();
+
+            if (_isInitialized)
+                return;
+
+            await InitializeAsync();
+        }
+
+        private async Task InitializeAsync()
+        {
+            try
+            {
+                Debug.WriteLine("🚀 Инициализация MainPage");
+
+                ShowLoading(true);
+
+                // 1. Инициализация сервисов
+                Debug.WriteLine("▶️ ДО создания ProfileService");
+                _profileService = new ProfileService();
+                await _profileService.InitializeAsync();
+                Debug.WriteLine("▶️ ПОСЛЕ создания ProfileService");
+
+                Debug.WriteLine("▶️ ДО GetCurrentProfile");
+                _currentProfile = _profileService.GetCurrentProfile();
+                Debug.WriteLine("▶️ ПОСЛЕ GetCurrentProfile");
+
+
+                if (_currentProfile != null &&
+                    _currentProfile.AppTheme != AppTheme.Unspecified &&
+                    Application.Current != null)
+                {
+                    Application.Current.UserAppTheme = _currentProfile.AppTheme;
+                }
+
+                // 2. Инициализация БД и трекера
+                await InitializeHeavyComponentsAsync();
+
+                // 3. Инициализация UI
+                Device.BeginInvokeOnMainThread(() =>
+                {
+                    _currentActiveButton = ProfileButton;
+                    SetActiveButton(ProfileButton);
+
+                    LoadProfileView();
+
+                    ProfileButton.Clicked += OnProfileClicked;
+                    FinanceButton.Clicked += OnFinanceClicked;
+                    TrackButton.Clicked += OnTrackClicked;
+                    ThemeSwitch.Toggled += OnThemeSwitchToggled;
+
+                    LoadProfileSettings();
+                    RefreshProfileInfo();
+
+                    ShowLoading(false);
+                    _isInitialized = true;
+
+                    Debug.WriteLine("✅ MainPage полностью загружен");
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ Ошибка инициализации MainPage: {ex}");
+
+                ShowLoading(false);
+
+                await DisplayAlert(
+                    "Ошибка",
+                    "Не удалось загрузить приложение. Перезапустите его.",
+                    "OK");
+            }
+        }
+
+        private void ShowLoading(bool show)
+        {
+            Device.BeginInvokeOnMainThread(() =>
+            {
+                if (LoadingGrid != null)
+                    LoadingGrid.IsVisible = show;
+
+                if (MainGrid != null)
+                    MainGrid.IsVisible = !show;
+            });
+        }
+
+        private async Task InitializeHeavyComponentsAsync()
+        {
+            if (_currentProfile == null)
+                throw new Exception("_currentProfile == null");
+
+            TrackerService.Initialize(_currentProfile.Id);   // 1️⃣ инициализация базы и ID профиля
+            TrackerService.EnsureStarted();                 // 2️⃣ запуск трекера
+
+            var todayStats = await TrackerService.GetTodayStatsAsync(); // 3️⃣ теперь безопасно
+            Console.WriteLine($"Сегодняшнее время: {todayStats.TotalSeconds} секунд");
+        }
+
+
+
+        private void LoadProfileView()
+        {
+            if (MainContent != null)
+            {
+                MainContent.Children.Clear();
+
+                try
+                {
+                    var profileView = new ProfileView();
+                    MainContent.Children.Add(profileView);
+                    Console.WriteLine("✅ ProfileView загружен");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Ошибка загрузки ProfileView: {ex.Message}");
+
+                    // Запасной вариант
+                    var errorView = new VerticalStackLayout
+                    {
+                        VerticalOptions = LayoutOptions.Center,
+                        HorizontalOptions = LayoutOptions.Center,
+                        Spacing = 20,
+                        Children =
+                        {
+                            new Label
+                            {
+                                Text = "👤 Профиль",
+                                FontSize = 24,
+                                FontAttributes = FontAttributes.Bold,
+                                TextColor = Application.Current.UserAppTheme == AppTheme.Dark ?
+                                           Color.FromArgb("#FFFFFF") : Color.FromArgb("#000000")
+                            },
+                            new Label
+                            {
+                                Text = "Ошибка загрузки",
+                                TextColor = Color.FromArgb("#FF4B4B")
+                            },
+                            new Button
+                            {
+                                Text = "Попробовать снова",
+                                BackgroundColor = Color.FromArgb("#5865F2"),
+                                TextColor = Color.FromArgb("#fff"),
+                                Command = new Command(() => LoadProfileView())
+                            }
+                        }
+                    };
+                    MainContent.Children.Add(errorView);
+                }
+            }
+        }
+
+        private void LoadView(View view)
+        {
+            if (MainContent == null) return;
+
+            MainContent.Children.Clear();
+
+            // Для TrackerView загружаем с задержкой
+            if (view is TrackerView)
+            {
+                // Показываем индикатор загрузки
+                var loadingView = new StackLayout
+                {
+                    VerticalOptions = LayoutOptions.Center,
+                    HorizontalOptions = LayoutOptions.Center,
+                    Children =
+                    {
+                        new ActivityIndicator
+                        {
+                            IsRunning = true,
+                            Color = Color.FromArgb("#5865F2"),
+                            WidthRequest = 30,
+                            HeightRequest = 30
+                        },
+                        new Label
+                        {
+                            Text = "Загрузка трекера...",
+                            TextColor = Application.Current.UserAppTheme == AppTheme.Dark ?
+                                       Color.FromArgb("#FFFFFF") : Color.FromArgb("#000000"),
+                            FontSize = 12
+                        }
+                    }
+                };
+
+                MainContent.Children.Add(loadingView);
+
+                // Отложенная загрузка
+                Device.StartTimer(TimeSpan.FromMilliseconds(300), () =>
+                {
+                    Device.BeginInvokeOnMainThread(() =>
+                    {
+                        MainContent.Children.Clear();
+                        MainContent.Children.Add(view);
+                    });
+                    return false; // Останавливаем таймер
+                });
+            }
+            else
+            {
+                MainContent.Children.Add(view);
+            }
         }
 
         private void LoadProfileSettings()
         {
-            ThemeSwitch.IsToggled = _currentProfile.Theme == AppTheme.Dark ||
-                                   (Application.Current.UserAppTheme == AppTheme.Dark);
+            if (ThemeSwitch != null && _currentProfile != null)
+            {
+                ThemeSwitch.IsToggled = _currentProfile.AppTheme == AppTheme.Dark ||
+                                       (Application.Current.UserAppTheme == AppTheme.Dark);
+            }
             RefreshProfileInfo();
         }
 
         private void RefreshProfileInfo()
         {
             _currentProfile = _profileService.GetCurrentProfile();
-            //ProfileAvatarLabel.Text = _currentProfile.Avatar;
-            //ProfileNameLabel.Text = _currentProfile.Name;
-            //ProfileStatsLabel.Text = $"Задачи: {_currentProfile.TotalTasks} | Заметки: {_currentProfile.TotalNotes}";
-
             UpdateButtonColors();
-        }
-
-        private void LoadView(View view)
-        {
-            MainContent.Children.Clear();
-            MainContent.Children.Add(view);
         }
 
         private void SetActiveButton(Button activeButton)
@@ -72,36 +256,35 @@ namespace Mauixui
             _currentActiveButton = activeButton;
         }
 
-        private void OnHomeClicked(object sender, EventArgs e)
+        private void OnProfileClicked(object sender, EventArgs e)
         {
-            SetActiveButton(HomeButton);
-            LoadView(new ProfileView());
+            if (_currentActiveButton != ProfileButton)
+            {
+                SetActiveButton(ProfileButton);
+                LoadView(new ProfileView());
+            }
         }
-
-        //private void OnProfileClicked(object sender, EventArgs e)
-        //{
-        //    SetActiveButton(ProfileButton);
-        //    LoadView(new ProfileView());
-        //}
 
         private void OnFinanceClicked(object sender, EventArgs e)
         {
-            SetActiveButton(FinanceButton);
-            LoadView(new FinanceView());
+            if (_currentActiveButton != FinanceButton)
+            {
+                SetActiveButton(FinanceButton);
+                LoadView(new FinanceView());
+            }
         }
 
         private void OnTrackClicked(object sender, EventArgs e)
         {
-            SetActiveButton(TrackButton);
-            LoadView(new TrackerView());
+            if (_currentActiveButton != TrackButton)
+            {
+                SetActiveButton(TrackButton);
+
+                // Показываем индикатор перед загрузкой тяжелого TrackerView
+                var trackerView = new TrackerView();
+                LoadView(trackerView);
+            }
         }
-
-        //private void OnNotesClicked(object sender, EventArgs e)
-        //{
-        //    SetActiveButton(NotesButton);
-        //    LoadView(new NotesView());
-        //}
-
 
         private async void OnProfileMenuClicked(object sender, EventArgs e)
         {
@@ -141,23 +324,18 @@ namespace Mauixui
                     await _profileService.UpdateAllProfilesStatsAsync();
                     RefreshProfileInfo();
 
-                    if (_currentActiveButton == HomeButton)
+                    if (_currentActiveButton == ProfileButton)
                         LoadView(new ProfileView());
-                    //else if (_currentActiveButton == ProfileButton)
-                    //    LoadView(new ProfileView());
                     else if (_currentActiveButton == FinanceButton)
                         LoadView(new FinanceView());
                     else if (_currentActiveButton == TrackButton)
                         LoadView(new TrackerView());
-                    //else if (_currentActiveButton == NotesButton)
-                    //    LoadView(new TrackerView());
 
                     await DisplayAlert("Успех", $"Профиль {selectedProfile.Name} активирован", "OK");
                 }
             }
         }
 
-        // УБЕРИТЕ ДУБЛИРУЮЩИЙ МЕТОД - ОСТАВЬТЕ ТОЛЬКО ОДИН
         public async void RefreshGlobalStatistics()
         {
             await _profileService.UpdateAllProfilesStatsAsync();
@@ -277,11 +455,9 @@ namespace Mauixui
 
             var stats = "📊 Статистика профиля: " + currentProfile.Name + "\n\n" +
                        "📅 Создан: " + currentProfile.CreatedAt.ToString("dd.MM.yyyy") + "\n" +
-                       "✅ Задач выполнено: " + currentProfile.TotalTasks + "\n" +
-                       "📝 Заметок создано: " + currentProfile.TotalNotes + "\n" +
                        "⏱️ Отслежено времени: " + currentProfile.TotalTrackedTime.ToString(@"hh\:mm\:ss") + "\n\n" +
                        "🎨 Настройки:\n" +
-                       "• Тема: " + GetThemeName(currentProfile.Theme) + "\n" +
+                       "• Тема: " + GetThemeName(currentProfile.AppTheme) + "\n" +
                        "• Цвет акцента: " + currentProfile.AccentColor;
 
             await DisplayAlert("Статистика профиля", stats, "OK");
@@ -300,8 +476,18 @@ namespace Mauixui
 
         public void UpdateProfileStatistics(int tasksCount, int notesCount, TimeSpan trackedTime)
         {
-            _profileService.UpdateProfileStatistics(tasksCount, notesCount, trackedTime);
-            RefreshProfileInfo();
+            try
+            {
+                if (_profileService != null)
+                {
+                    //_profileService.UpdateProfileStats(tasksCount, notesCount, trackedTime);
+                    RefreshProfileInfo();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка обновления статистики профиля: {ex.Message}");
+            }
         }
 
         private void OnThemeSwitchToggled(object sender, ToggledEventArgs e)
@@ -309,7 +495,7 @@ namespace Mauixui
             var newTheme = e.Value ? AppTheme.Dark : AppTheme.Light;
             Application.Current.UserAppTheme = newTheme;
 
-            _currentProfile.Theme = newTheme;
+            _currentProfile.AppTheme = newTheme;
             _profileService.UpdateProfile(_currentProfile);
 
             UpdateButtonColors();
@@ -318,53 +504,9 @@ namespace Mauixui
         private void UpdateButtonColors()
         {
             var currentActive = _currentActiveButton;
-            SetActiveButton(currentActive);
-        }
-
-        // Вспомогательные функции
-
-        private async void OnCreateTestUser(object sender, EventArgs e)
-        {
-            try
+            if (currentActive != null)
             {
-                var profileService = new ProfileService();
-                var authService = new AuthService(profileService);
-
-                // Проверяем, есть ли уже пользователи с email
-                var profiles = profileService.GetProfiles();
-                var existingUser = profiles.FirstOrDefault(p => !string.IsNullOrEmpty(p.Email));
-
-                if (existingUser != null)
-                {
-                    await DisplayAlert("Информация",
-                        $"Уже есть пользователь:\nEmail: {existingUser.Email}\nПароль: {existingUser.PasswordHash}", "OK");
-                    return;
-                }
-
-                // Создаем нового тестового пользователя
-                var testProfile = new UserProfile
-                {
-                    Name = "Тестовый Пользователь",
-                    Email = "test@mail.ru",
-                    PasswordHash = "123456",
-                    Avatar = "👤",
-                    CreatedAt = DateTime.Now,
-                    LastLogin = DateTime.Now,
-                    IsActive = true
-                };
-
-                profileService.AddProfile(testProfile);
-                profileService.SetCurrentProfile(testProfile);
-
-                await DisplayAlert("Успех",
-                    "Тестовый пользователь создан!\n\n" +
-                    "📧 Email: test@mail.ru\n" +
-                    "🔑 Пароль: 123456\n\n" +
-                    "Используйте эти данные для входа.", "OK");
-            }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Ошибка", ex.Message, "OK");
+                SetActiveButton(currentActive);
             }
         }
     }

@@ -6,150 +6,133 @@ using Mauixui.Models;
 
 namespace Mauixui.Services
 {
-    public static class TrackerService
+    public class TrackerService
     {
-        // Живое время (каждая секунда увеличивается)
-        public static TimeSpan LiveTotalTime = TimeSpan.Zero;
-
+        private static TrackerService _instance;
         private static WindowsActivityTracker _tracker;
-        private static bool _isInitialized = false;
+        public static bool _isInitialized = false;
+        private static MainDatabase _database;
+        private static string _currentProfileId;
 
-        // Блокировка, чтобы избежать гонок
-        private static readonly object _lock = new object();
-
-        public static WindowsActivityTracker Tracker
+        public static TimeSpan LiveTotalTime { get; private set; } = TimeSpan.Zero;
+        public static TrackerService Instance
         {
             get
             {
-                if (!_isInitialized)
+                if (_instance == null)
                 {
-                    _tracker = new WindowsActivityTracker();
-                    _tracker.OnTick += OnTrackerTick;   // ВАЖНО: таймер реального времени
-                    _isInitialized = true;
+                    _instance = new TrackerService();
                 }
-                return _tracker;
+                return _instance;
+            }
+        }
+        public static WindowsActivityTracker Tracker => _tracker;
+
+        public static void Initialize(string currentProfileId)
+        {
+            _database = MainDatabase.Instance;
+            _currentProfileId = currentProfileId;
+
+            if (!_isInitialized)
+            {
+                _tracker = new WindowsActivityTracker();
+                _tracker.OnAppUsageRecorded += OnAppUsageRecorded;
+                _tracker.OnWebsiteUsageRecorded += OnWebsiteUsageRecorded;
+                _isInitialized = true;
             }
         }
 
-        /// <summary>
-        /// Запускает трекер, если он ещё не запущен.
-        /// </summary>
         public static void EnsureStarted()
         {
             var tracker = Tracker;
-            if (!tracker.IsTracking)
+            if (tracker != null && !tracker.IsTracking)
+            {
                 tracker.StartTracking();
-        }
-
-        // 🔥 Обновляется каждую секунду из внутреннего таймера WindowsActivityTracker
-        private static void OnTrackerTick()
-        {
-            lock (_lock)
-            {
-                LiveTotalTime += TimeSpan.FromSeconds(1);
             }
         }
 
-        // ---------------------------
-        // ВРЕМЯ (сумма всей дневной активности)
-        // ---------------------------
-
-        public static async Task<TimeSpan> GetTotalTrackedTimeAsync()
+        public static void SetCurrentProfile(string profileId)
         {
-            try
-            {
-                var todayApps = GetTodayAppUsage();
-                var todaySites = GetTodayWebsiteUsage();
-
-                double total =
-                    todayApps.Sum(r => r.Duration.TotalSeconds) +
-                    todaySites.Sum(r => r.Duration.TotalSeconds);
-
-                return TimeSpan.FromSeconds(total);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка получения общего времени: {ex.Message}");
-                return TimeSpan.Zero;
-            }
+            _currentProfileId = profileId;
         }
 
-        public static TimeSpan GetTotalTrackedTime()
+        private static async void OnAppUsageRecorded(AppUsageRecord record)
         {
-            try
-            {
-                var todayApps = GetTodayAppUsage();
-                var todaySites = GetTodayWebsiteUsage();
-
-                double total =
-                    todayApps.Sum(r => r.Duration.TotalSeconds) +
-                    todaySites.Sum(r => r.Duration.TotalSeconds);
-
-                return TimeSpan.FromSeconds(total);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка получения общего времени: {ex.Message}");
-                return TimeSpan.Zero;
-            }
+            record.ProfileId = _currentProfileId;
+            await _database.SaveAppUsageAsync(record);
+            await UpdateTodayStatsAsync();
         }
 
-        // ---------------------------
-        // ЗАПИСИ ЗА СЕГОДНЯ
-        // ---------------------------
-
-        public static List<AppUsageRecord> GetTodayAppUsage()
+        private static async void OnWebsiteUsageRecorded(WebsiteUsageRecord record)
         {
-            return Tracker.GetTodayAppUsage();
+            record.ProfileId = _currentProfileId;
+            await _database.SaveWebsiteUsageAsync(record);
+            await UpdateTodayStatsAsync();
         }
 
-        public static List<WebsiteUsageRecord> GetTodayWebsiteUsage()
+        private static async Task UpdateTodayStatsAsync()
         {
-            return Tracker.GetTodayWebsiteUsage();
+            var todayStats = await _database.GetTodayStatsAsync(_currentProfileId);
+
+            var todayApps = await _database.GetTodayAppUsageAsync(_currentProfileId);
+            var todayWebsites = await _database.GetTodayWebsiteUsageAsync(_currentProfileId);
+
+            // Обновляем статистику
+            double totalSeconds = 0;
+            foreach (var app in todayApps)
+                totalSeconds += (app.EndTime - app.StartTime).TotalSeconds;
+
+            foreach (var site in todayWebsites)
+                totalSeconds += (site.EndTime - site.StartTime).TotalSeconds;
+
+            todayStats.TotalSeconds = (long)totalSeconds;
+
+            // Обновляем топ приложение и сайт
+            var appGroups = todayApps.GroupBy(a => a.AppName);
+            var topAppGroup = appGroups.OrderByDescending(g => g.Sum(a => (a.EndTime - a.StartTime).TotalSeconds)).FirstOrDefault();
+            todayStats.TopApp = topAppGroup?.Key ?? "Нет данных";
+
+            var siteGroups = todayWebsites.GroupBy(w => w.Website);
+            var topSiteGroup = siteGroups.OrderByDescending(g => g.Sum(w => (w.EndTime - w.StartTime).TotalSeconds)).FirstOrDefault();
+            todayStats.TopSite = topSiteGroup?.Key ?? "Нет данных";
+
+            await _database.UpdateDailyStatAsync(todayStats);
+
+            // Обновляем общее время в профиле
+            await _database.UpdateProfileTrackedTimeAsync(_currentProfileId);
+
+            LiveTotalTime = TimeSpan.FromSeconds(totalSeconds);
         }
 
-        // ---------------------------
-        // ТЕКУЩАЯ АКТИВНОСТЬ (LIVE)
-        // ---------------------------
-
-        public static (string app, TimeSpan time) GetCurrentAppActivity()
+        public static async Task<List<AppUsageRecord>> GetTodayAppUsageAsync()
         {
-            try
-            {
-                var dict = Tracker.CurrentAppTimes;
-
-                if (dict.Count == 0)
-                    return ("Неизвестно", TimeSpan.Zero);
-
-                var pair = dict.OrderByDescending(x => x.Value).First();
-
-                return (pair.Key ?? "Неизвестно", pair.Value);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка получения текущей активности: {ex.Message}");
-                return ("Ошибка", TimeSpan.Zero);
-            }
+            return await _database.GetTodayAppUsageAsync(_currentProfileId);
         }
 
-        public static (string website, TimeSpan time) GetCurrentWebsiteActivity()
+        public static async Task<List<WebsiteUsageRecord>> GetTodayWebsiteUsageAsync()
         {
-            try
-            {
-                var dict = Tracker.CurrentWebsiteTimes;
+            return await _database.GetTodayWebsiteUsageAsync(_currentProfileId);
+        }
 
-                if (dict.Count == 0)
-                    return ("Неизвестно", TimeSpan.Zero);
+        public static async Task<DailyStat> GetTodayStatsAsync()
+        {
+            if (_database == null)
+                throw new InvalidOperationException("TrackerService not initialized. Call Initialize() first.");
+            if (string.IsNullOrEmpty(_currentProfileId))
+                throw new InvalidOperationException("Profile ID not set. Call Initialize(profileId) first.");
 
-                var pair = dict.OrderByDescending(x => x.Value).First();
+            return await _database.GetTodayStatsAsync(_currentProfileId);
+        }
 
-                return (pair.Key ?? "Неизвестно", pair.Value);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка получения текущего сайта: {ex.Message}");
-                return ("Ошибка", TimeSpan.Zero);
-            }
+
+        public static void StartTracking()
+        {
+            _tracker?.StartTracking();
+        }
+
+        public static void StopTracking()
+        {
+            _tracker?.StopTracking();
         }
     }
 }

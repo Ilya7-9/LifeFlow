@@ -1,5 +1,6 @@
 using Microsoft.Maui.Controls;
 using Mauixui.Services;
+using Mauixui.Models;
 using System;
 using System.Threading.Tasks;
 
@@ -64,7 +65,7 @@ namespace Mauixui.Views
                 {
                     Name = name,
                     Email = email,
-                    PasswordHash = password,
+                    Password = password,
                     Avatar = _selectedAvatar,
                     CreatedAt = DateTime.Now,
                     LastLogin = DateTime.Now,

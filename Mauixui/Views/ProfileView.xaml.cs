@@ -17,12 +17,13 @@ namespace Mauixui.Views
         private System.Timers.Timer _refreshTimer;
         private UserProfile _currentProfile;
         private readonly CredentialsService _credentialsService;
+        private MainDatabase _db;
 
         public ProfileView()
         {
             InitializeComponent();
             _profileService = new ProfileService();
-            _authService = new AuthService(_profileService);
+            _authService = new AuthService();
             _credentialsService = new CredentialsService();
 
             LoadProfileData();
@@ -61,14 +62,12 @@ namespace Mauixui.Views
             {
                 if (_currentProfile == null) return;
 
-                var financeDb = _profileService.GetFinanceDatabase(_currentProfile.Id);
-                var assetDb = _profileService.GetAssetDatabase(_currentProfile.Id);
-                var debtDb = _profileService.GetDebtDatabase(_currentProfile.Id);
+                _db = MainDatabase.Instance;
 
                 // ИСПРАВЛЕНИЕ: Получаем все данные и фильтруем по profileId
-                var allFinances = await financeDb.GetItemsAsync();
-                var allAssets = await assetDb.GetItemsAsync();
-                var allDebts = await debtDb.GetItemsAsync();
+                var allFinances = await _db.GetItemsAsync();
+                var allAssets = await _db.GetItemsAsync();
+                var allDebts = await _db.GetItemsAsync();
 
                 // Фильтруем по текущему профилю
                 var profileFinances = allFinances.Where(f => f.ProfileId == _currentProfile.Id).ToList();
@@ -77,7 +76,7 @@ namespace Mauixui.Views
 
                 var totalIncome = profileFinances.Where(f => f.Type == "Доход").Sum(f => f.Amount);
                 var totalExpenses = profileFinances.Where(f => f.Type == "Расход").Sum(f => f.Amount);
-                var totalAssets = profileAssets.Sum(a => a.Value);
+                var totalAssets = profileAssets.Sum(a => a.Amount);
                 var totalDebts = profileDebts.Sum(d => d.Amount);
                 var netWorth = totalAssets - totalDebts;
 
@@ -110,8 +109,8 @@ namespace Mauixui.Views
             {
                 if (_currentProfile == null) return;
 
-                var trackerDb = _profileService.GetTrackerDatabase(_currentProfile.Id);
-                var todayStats = await trackerDb.GetTodayStatsAsync();
+                // ИСПРАВЛЕНИЕ: Используем статический метод TrackerDatabase
+                var todayStats = await TrackerService.GetTodayStatsAsync();
 
                 // Временные данные для демонстрации
                 var todaySeconds = todayStats?.TotalSeconds ?? 7200; // 2 часа по умолчанию
@@ -138,7 +137,7 @@ namespace Mauixui.Views
             }
         }
 
-        // Остальные методы остаются без изменений...
+        // Метод для расчета продуктивности
         private int CalculateProductivity(long totalSeconds)
         {
             var maxProductiveSeconds = 8 * 3600;
@@ -168,19 +167,15 @@ namespace Mauixui.Views
                 _currentProfile = _profileService.GetCurrentProfile();
                 if (_currentProfile == null) return;
 
-                // Получаем email из credentials
-                var credentials = await _credentialsService.GetCredentialsAsync(_currentProfile.Id);
-                var emailFromCredentials = credentials?.Email;
-
                 Device.BeginInvokeOnMainThread(() =>
                 {
                     ProfileNameLabel.Text = _currentProfile.Name ?? "Без имени";
                     ProfileAvatarLabel.Text = _currentProfile.Avatar ?? "👤";
 
-                    // Показываем email из credentials, если есть, иначе из профиля
-                    ProfileEmailLabel.Text = !string.IsNullOrEmpty(emailFromCredentials)
-                        ? emailFromCredentials
-                        : _currentProfile.Email ?? "Email не указан";
+                    // Теперь email берется напрямую из профиля
+                    ProfileEmailLabel.Text = !string.IsNullOrEmpty(_currentProfile.Email)
+                        ? _currentProfile.Email
+                        : "Email не указан";
 
                     ProfileCreatedLabel.Text = $"Создан: {_currentProfile.CreatedAt:dd.MM.yyyy}";
                     UpdateAppTheme();
@@ -195,7 +190,7 @@ namespace Mauixui.Views
         private void UpdateAppTheme()
         {
             if (_currentProfile == null) return;
-            Application.Current.UserAppTheme = _currentProfile.Theme;
+            Application.Current.UserAppTheme = _currentProfile.AppTheme;
         }
 
         private string FormatTime(TimeSpan time)
@@ -215,8 +210,8 @@ namespace Mauixui.Views
             }
         }
 
-// РЕДАКТИРОВАНИЕ ПРОФИЛЯ
-private async void OnEditProfileClicked(object sender, EventArgs e)
+        // РЕДАКТИРОВАНИЕ ПРОФИЛЯ
+        private async void OnEditProfileClicked(object sender, EventArgs e)
         {
             if (_currentProfile == null) return;
 
@@ -231,9 +226,6 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
                 case "Сменить аватар":
                     await ChangeProfileAvatar();
                     break;
-                //case "Изменить email":
-                //    await ChangeProfileEmail();
-                //    break;
             }
         }
 
@@ -245,7 +237,7 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
             if (!string.IsNullOrWhiteSpace(newName) && newName != "Отмена")
             {
                 _currentProfile.Name = newName.Trim();
-                _profileService.UpdateProfile(_currentProfile);
+                await _profileService.UpdateProfileAsync(_currentProfile);
                 LoadProfileData();
                 await DisplayAlert("Успех", "Имя успешно изменено", "OK");
             }
@@ -259,7 +251,7 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
             if (avatar != "Отмена")
             {
                 _currentProfile.Avatar = avatar;
-                _profileService.UpdateProfile(_currentProfile);
+                await _profileService.UpdateProfileAsync(_currentProfile);
                 LoadProfileData();
             }
         }
@@ -277,57 +269,47 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
                     return;
                 }
 
+                var profiles = await _profileService.GetProfilesAsync();
+                if (profiles.Any(p => p.Id != _currentProfile.Id &&
+                    p.Email?.ToLower() == newEmail.ToLower()))
+                {
+                    await DisplayAlert("Ошибка", "Этот email уже используется другим профилем", "OK");
+                    return;
+                }
+
                 _currentProfile.Email = newEmail.Trim().ToLower();
-                _profileService.UpdateProfile(_currentProfile);
+                await _profileService.UpdateProfileAsync(_currentProfile);
                 LoadProfileData();
                 await DisplayAlert("Успех", "Email успешно изменен", "OK");
             }
         }
 
-        // СМЕНА ПАРОЛЯ - ИСПРАВЛЕННАЯ ЛОГИКА
         private async void OnChangePasswordClicked(object sender, EventArgs e)
         {
             if (_currentProfile == null) return;
 
             try
             {
-                // Получаем учетные данные текущего профиля
-                var credentials = await _credentialsService.GetCredentialsAsync(_currentProfile.Id);
-                var hasPassword = credentials != null && !string.IsNullOrEmpty(credentials.PasswordHash);
+                var hasPassword = !string.IsNullOrEmpty(_currentProfile.Password);
 
                 if (hasPassword)
                 {
-                    // Если пароль уже установлен - просим старый пароль
                     var currentPassword = await DisplayPromptAsync("Смена пароля",
                         "Введите текущий пароль:", "Продолжить", "Отмена");
 
                     if (string.IsNullOrWhiteSpace(currentPassword)) return;
 
-                    // Проверяем старый пароль напрямую через credentials
-                    if (credentials.PasswordHash != currentPassword)
+                    if (_currentProfile.Password != currentPassword)
                     {
                         await DisplayAlert("Ошибка", "Неверный текущий пароль", "OK");
                         return;
                     }
                 }
-                else
-                {
-                    // Если пароля нет - просто переходим к установке нового
-                    await DisplayAlert("Установка пароля",
-                        "Установите пароль для защиты вашего аккаунта", "OK");
-                }
 
-                // Запрос нового пароля
                 var newPassword = await DisplayPromptAsync("Смена пароля",
                     "Введите новый пароль:", "Продолжить", "Отмена");
 
                 if (string.IsNullOrWhiteSpace(newPassword)) return;
-
-                if (newPassword.Length < 6)
-                {
-                    await DisplayAlert("Ошибка", "Пароль должен содержать минимум 6 символов", "OK");
-                    return;
-                }
 
                 var confirmPassword = await DisplayPromptAsync("Смена пароля",
                     "Подтвердите новый пароль:", "Сменить", "Отмена");
@@ -340,18 +322,10 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
                     return;
                 }
 
-                // Сохраняем новый пароль через CredentialsService
-                var email = credentials?.Email ?? ""; // Берем email из существующих credentials или пустую строку
-                var success = await _credentialsService.SaveCredentialsAsync(_currentProfile.Id, email, newPassword);
+                _currentProfile.Password = newPassword;
+                await _profileService.UpdateProfileAsync(_currentProfile);
 
-                if (success)
-                {
-                    await DisplayAlert("Успех", "Пароль успешно " + (hasPassword ? "изменен" : "установлен"), "OK");
-                }
-                else
-                {
-                    await DisplayAlert("Ошибка", "Не удалось сохранить пароль", "OK");
-                }
+                await DisplayAlert("Успех", "Пароль успешно " + (hasPassword ? "изменен" : "установлен"), "OK");
             }
             catch (Exception ex)
             {
@@ -398,7 +372,7 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
 
             if (theme != "Отмена")
             {
-                var newTheme = theme switch
+                _currentProfile.AppTheme = theme switch
                 {
                     "🌙 Тёмная" => AppTheme.Dark,
                     "☀️ Светлая" => AppTheme.Light,
@@ -406,8 +380,7 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
                     _ => AppTheme.Unspecified
                 };
 
-                _currentProfile.Theme = newTheme;
-                _profileService.UpdateProfile(_currentProfile);
+                await _profileService.UpdateProfileAsync(_currentProfile);
                 UpdateAppTheme();
                 await DisplayAlert("Успех", "Тема приложения изменена", "OK");
             }
@@ -426,16 +399,51 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
         }
 
         // ЭКСПОРТ ДАННЫХ
-        private async void OnExportDataClicked(object sender, EventArgs e)
+        private async void OnExportClicked(object sender, EventArgs e)
         {
-            var confirm = await DisplayAlert("Экспорт данных",
-                "Экспортировать все данные профиля?", "Экспортировать", "Отмена");
-
-            if (confirm)
+            try
             {
-                await DisplayAlert("Экспорт",
-                    "Будут экспортированы:\n• Финансовые операции\n• Активы и долги\n• Статистика трекера\n\n" +
-                    "Функция будет доступна в следующем обновлении", "OK");
+                var exportPath = await DisplayPromptAsync("Экспорт профилей",
+                    "Введите полный путь для сохранения (например: C:/profiles.json):",
+                    "Сохранить", "Отмена", _profileService.GetProfilesFilePath());
+
+                if (!string.IsNullOrEmpty(exportPath) && exportPath != "Отмена")
+                {
+                    await _profileService.ExportToLocationAsync(exportPath);
+                    await DisplayAlert("Успех", $"Профили экспортированы в:\n{exportPath}", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Ошибка", $"Ошибка экспорта: {ex.Message}", "OK");
+            }
+        }
+
+        private async void OnImportClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                var importPath = await DisplayPromptAsync("Импорт профилей",
+                    "Введите полный путь к файлу для импорта:",
+                    "Импортировать", "Отмена");
+
+                if (!string.IsNullOrEmpty(importPath) && importPath != "Отмена")
+                {
+                    var confirm = await DisplayAlert("Подтверждение",
+                        "Текущие профили будут заменены. Продолжить?",
+                        "Да", "Нет");
+
+                    if (confirm)
+                    {
+                        await _profileService.ImportFromFileAsync(importPath);
+                        await DisplayAlert("Успех", "Профили успешно импортированы", "OK");
+                        LoadProfileData();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Ошибка", $"Ошибка импорта: {ex.Message}", "OK");
             }
         }
 
@@ -484,7 +492,6 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
             }
         }
 
-        // ПРИВЯЗКА EMAIL К ПРОФИЛЮ
         private async void OnBindEmailClicked(object sender, EventArgs e)
         {
             if (_currentProfile == null) return;
@@ -492,7 +499,7 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
             try
             {
                 var email = await DisplayPromptAsync("Привязка email",
-            "Введите email для привязки к профилю:", "Привязать", "Отмена");
+                    "Введите email для привязки к профилю:", "Привязать", "Отмена");
 
                 if (string.IsNullOrWhiteSpace(email)) return;
 
@@ -503,29 +510,20 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
                 }
 
                 // Проверяем, не используется ли email другим профилем
-                var existingCredentials = await _credentialsService.GetCredentialsByEmailAsync(email);
-                if (existingCredentials != null && existingCredentials.ProfileId != _currentProfile.Id)
+                var profiles = _profileService.GetProfiles();
+                if (profiles.Any(p => p.Id != _currentProfile.Id &&
+                    p.Email?.ToLower() == email.ToLower()))
                 {
                     await DisplayAlert("Ошибка", "Этот email уже используется другим профилем", "OK");
                     return;
                 }
 
-                // Получаем текущие учетные данные или создаем новые
-                var currentCredentials = await _credentialsService.GetCredentialsAsync(_currentProfile.Id);
-                var currentPassword = currentCredentials?.PasswordHash ?? "";
+                // Устанавливаем email
+                _currentProfile.Email = email.ToLower().Trim();
+                _profileService.UpdateProfile(_currentProfile);
 
-                // Сохраняем с новым email
-                var success = await _credentialsService.SaveCredentialsAsync(_currentProfile.Id, email, currentPassword);
-
-                if (success)
-                {
-                    await DisplayAlert("Успех", "Email успешно привязан к профилю", "OK");
-                    LoadProfileData(); // Обновляем отображение
-                }
-                else
-                {
-                    await DisplayAlert("Ошибка", "Не удалось привязать email", "OK");
-                }
+                await DisplayAlert("Успех", "Email успешно привязан к профилю", "OK");
+                LoadProfileData(); // Обновляем отображение
             }
             catch (Exception ex)
             {
@@ -534,6 +532,19 @@ private async void OnEditProfileClicked(object sender, EventArgs e)
         }
 
         // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+        private void OnOpenFileLocationClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                _profileService.OpenFileLocation();
+            }
+            catch (Exception ex)
+            {
+                DisplayAlert("Ошибка", $"Не удалось открыть файл: {ex.Message}", "OK");
+            }
+        }
+
+        // Вспомогательные методы для диалогов
         private async Task DisplayAlert(string title, string message, string cancel)
         {
             if (Application.Current?.MainPage != null)

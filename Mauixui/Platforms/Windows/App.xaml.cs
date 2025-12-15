@@ -16,8 +16,26 @@ namespace Mauixui.WinUI
         /// </summary>
         public App()
         {
-            this.InitializeComponent();
+            InitializeComponent();
+
+            this.UnhandledException += (s, e) =>
+            {
+                try
+                {
+                    var logDir = @"D:\Logs\MyApp";
+                    Directory.CreateDirectory(logDir); // гарантируем, что папка есть
+
+                    var logPath = Path.Combine(logDir, "error.txt");
+
+                    File.WriteAllText(logPath, e.Exception.ToString());
+                }
+                catch
+                {
+                    // Ничего не делаем, чтобы не упасть повторно
+                }
+            };
         }
+
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
     }

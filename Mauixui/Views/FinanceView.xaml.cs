@@ -14,10 +14,11 @@ namespace Mauixui.Views
     public partial class FinanceView : ContentView
     {
         private List<FinanceItem> _items = new();
-        private FinanceDatabase _db;
+        private MainDatabase _db;
         private string _profileId;
         private CategoryDatabase _categoryDb;
         private List<CategoryItem> _categories = new();
+        private bool _isInitialized = false;
 
         // Переменные для сортировки и поиска
         private string _currentSortField = "Date";
@@ -28,30 +29,106 @@ namespace Mauixui.Views
         {
             InitializeComponent();
 
-            var profileService = new ProfileService();
-            _profileId = profileService.GetCurrentProfile().Id;
-            _db = profileService.GetFinanceDatabase(_profileId);
-            _categoryDb = profileService.GetCategoryDatabase(_profileId);
-
+            // Только легкая инициализация в конструкторе
             InitializeSortPicker();
             SetupEventHandlers();
-            LoadFinanceItems();
-            LoadCategories();
+
+            // Показываем индикатор загрузки
+            ShowLoadingIndicator();
+        }
+
+        protected override async void OnParentSet()
+        {
+            base.OnParentSet();
+
+            if (!_isInitialized && this.Parent != null)
+            {
+                await InitializeAsync();
+            }
+        }
+
+        private void ShowLoadingIndicator()
+        {
+            if (FinanceList != null)
+            {
+                FinanceList.Children.Clear();
+                FinanceList.Children.Add(new ActivityIndicator
+                {
+                    IsRunning = true,
+                    Color = Color.FromArgb("#5865F2"),
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(0, 20, 0, 20)
+                });
+            }
+        }
+
+        private async Task InitializeAsync()
+        {
+            try
+            {
+                Console.WriteLine("🚀 Начало инициализации FinanceView...");
+
+                // Инициализация сервисов
+                var profileService = new ProfileService();
+                _profileId = profileService.GetCurrentProfile()?.Id;
+
+                if (string.IsNullOrEmpty(_profileId))
+                {
+                    Console.WriteLine("⚠️ Нет активного профиля");
+                    return;
+                }
+
+                // Инициализируем базы данных в фоновом потоке
+                await Task.Run(() =>
+                {
+                    _db = MainDatabase .Instance;
+                });
+
+                // Загружаем данные
+                await Task.WhenAll(
+                    Task.Run(async () => await LoadFinanceItemsAsync()),
+                    Task.Run(async () => await LoadCategoriesAsync())
+                );
+
+                _isInitialized = true;
+
+                Device.BeginInvokeOnMainThread(() =>
+                {
+                    FilterAndSortItems();
+                    UpdateBalance();
+                    Console.WriteLine("✅ FinanceView инициализирован");
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Ошибка инициализации FinanceView: {ex.Message}");
+
+                Device.BeginInvokeOnMainThread(() =>
+                {
+                    FinanceList.Children.Clear();
+                    FinanceList.Children.Add(new Label
+                    {
+                        Text = "Ошибка загрузки данных",
+                        TextColor = Color.FromArgb("#FF4B4B"),
+                        HorizontalOptions = LayoutOptions.Center,
+                        Margin = new Thickness(0, 20, 0, 0)
+                    });
+                });
+            }
         }
 
         private void InitializeSortPicker()
         {
-            SortPicker.SelectedIndex = 0; // Устанавливаем первую сортировку по умолчанию
+            SortPicker.SelectedIndex = 0;
             SortPicker.SelectedIndexChanged += OnSortPickerChanged;
         }
 
         private void SetupEventHandlers()
         {
-            // Поиск при изменении текста
             SearchEntry.TextChanged += OnSearchTextChanged;
         }
 
-        // Обработчик изменения сортировки
         private void OnSortPickerChanged(object sender, EventArgs e)
         {
             if (SortPicker.SelectedIndex == -1) return;
@@ -60,14 +137,12 @@ namespace Mauixui.Views
             ApplySorting(selectedSort);
         }
 
-        // Обработчик поиска
         private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
         {
             _searchText = SearchEntry.Text?.ToLower() ?? "";
             FilterAndSortItems();
         }
 
-        // Применить выбранную сортировку
         private void ApplySorting(string sortOption)
         {
             switch (sortOption)
@@ -105,20 +180,16 @@ namespace Mauixui.Views
             FilterAndSortItems();
         }
 
-        // Фильтрация и сортировка элементов
-        // Фильтрация и сортировка элементов
         private void FilterAndSortItems()
         {
             if (!_items.Any()) return;
 
-            // Фильтрация
             var filtered = _items.Where(item =>
                 string.IsNullOrEmpty(_searchText) ||
                 item.Description.ToLower().Contains(_searchText) ||
                 item.Category.ToLower().Contains(_searchText))
                 .ToList();
 
-            // Сортировка
             switch (_currentSortField)
             {
                 case "Date":
@@ -127,17 +198,14 @@ namespace Mauixui.Views
                         filtered.OrderByDescending(item => item.Date).ToList();
                     break;
                 case "Amount":
-                    // Исправленная сортировка по сумме с учетом типа операции
                     if (_isAscending)
                     {
-                        // По возрастанию: сначала расходы (отрицательные), потом доходы (положительные)
                         filtered = filtered
                             .OrderBy(item => item.Type == "Доход" ? item.Amount : -item.Amount)
                             .ToList();
                     }
                     else
                     {
-                        // По убыванию: сначала доходы (положительные), потом расходы (отрицательные)
                         filtered = filtered
                             .OrderByDescending(item => item.Type == "Доход" ? item.Amount : -item.Amount)
                             .ToList();
@@ -155,11 +223,10 @@ namespace Mauixui.Views
                     break;
             }
 
-            // Обновление отображаемого списка
             RenderFinanceItems(filtered);
         }
 
-        private async void LoadCategories()
+        private async Task LoadCategoriesAsync()
         {
             try
             {
@@ -180,18 +247,21 @@ namespace Mauixui.Views
                     _categories = await _categoryDb.GetCategoriesAsync(_profileId);
                 }
 
-                CategoryPicker.Items.Clear();
-                foreach (var cat in _categories)
+                Device.BeginInvokeOnMainThread(() =>
                 {
-                    CategoryPicker.Items.Add(cat.Name);
-                }
+                    CategoryPicker.Items.Clear();
+                    foreach (var cat in _categories)
+                    {
+                        CategoryPicker.Items.Add(cat.Name);
+                    }
 
-                var defaultIndex = CategoryPicker.Items.IndexOf("Без категории");
-                CategoryPicker.SelectedIndex = defaultIndex >= 0 ? defaultIndex : 0;
+                    var defaultIndex = CategoryPicker.Items.IndexOf("Без категории");
+                    CategoryPicker.SelectedIndex = defaultIndex >= 0 ? defaultIndex : 0;
+                });
             }
             catch (Exception ex)
             {
-                await Application.Current.MainPage.DisplayAlert("Ошибка", $"Не удалось загрузить категории:\n{ex.Message}", "OK");
+                Console.WriteLine($"Ошибка загрузки категорий: {ex.Message}");
             }
         }
 
@@ -213,9 +283,9 @@ namespace Mauixui.Views
                 Date = DateTime.Now
             };
 
-            await _db.SaveItemAsync(item);
+            await _db.SaveFinanceItemAsync(item);
             AmountEntry.Text = "";
-            LoadFinanceItems();
+            await LoadFinanceItemsAsync();
         }
 
         private async void AddExpenseClicked(object sender, EventArgs e)
@@ -236,24 +306,36 @@ namespace Mauixui.Views
                 Date = DateTime.Now
             };
 
-            await _db.SaveItemAsync(item);
+            await _db.SaveFinanceItemAsync(item);
             AmountEntry.Text = "";
-            LoadFinanceItems();
+            await LoadFinanceItemsAsync();
         }
 
-        private async void LoadFinanceItems()
+        private async Task LoadFinanceItemsAsync()
         {
-            _items = await _db.GetItemsAsync(_profileId);
-            FilterAndSortItems(); // Используем фильтрацию и сортировку вместо прямого рендеринга
-            UpdateBalance();
+            try
+            {
+                _items = await _db.GetItemsAsync(_profileId);
+
+                Device.BeginInvokeOnMainThread(() =>
+                {
+                    FilterAndSortItems();
+                    UpdateBalance();
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка загрузки финансовых записей: {ex.Message}");
+            }
         }
 
-        private void RenderFinanceItems(List<FinanceItem>? listOverride = null)
+        private void RenderFinanceItems(List<FinanceItem> list)
         {
-            var list = listOverride ?? _items;
+            if (FinanceList == null) return;
+
             FinanceList.Children.Clear();
 
-            if (!list.Any()) 
+            if (!list.Any())
             {
                 FinanceList.Children.Add(new Label
                 {
@@ -265,7 +347,10 @@ namespace Mauixui.Views
                 return;
             }
 
-            foreach (var item in list) // Убрали OrderByDescending, т.к. сортировка уже применена
+            // Ограничиваем количество отображаемых элементов для производительности
+            var itemsToShow = list.Take(50).ToList();
+
+            foreach (var item in itemsToShow)
             {
                 var color = item.Type == "Доход" ? "#23D160" : "#FF4B4B";
 
@@ -312,12 +397,11 @@ namespace Mauixui.Views
 
                 layout.Children.Add(grid);
 
-                // КНОПКА УДАЛЕНИЯ
                 var deleteBtn = new Button
                 {
                     Text = "Удалить",
                     BackgroundColor = Color.FromArgb("#FF4B4B"),
-                    TextColor = Color.FromArgb("fff"),
+                    TextColor = Color.FromArgb("#FFFFFF"),
                     CornerRadius = 10,
                     CommandParameter = item,
                     HorizontalOptions = LayoutOptions.End
@@ -328,6 +412,19 @@ namespace Mauixui.Views
 
                 frame.Content = layout;
                 FinanceList.Children.Add(frame);
+            }
+
+            // Если элементов больше 50, показываем сообщение
+            if (list.Count > 50)
+            {
+                FinanceList.Children.Add(new Label
+                {
+                    Text = $"Показано 50 из {list.Count} записей",
+                    TextColor = Color.FromArgb("#888888"),
+                    FontSize = 12,
+                    HorizontalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(0, 10, 0, 0)
+                });
             }
         }
 
@@ -342,9 +439,8 @@ namespace Mauixui.Views
 
                 if (!ok) return;
 
-                await _db.DeleteItemAsync(item);
-
-                LoadFinanceItems();
+                await _db.DeleteFinanceItemAsync(item);
+                await LoadFinanceItemsAsync();
             }
         }
 
@@ -391,9 +487,9 @@ namespace Mauixui.Views
                 Date = DatePicker.Date
             };
 
-            await _db.SaveItemAsync(item);
+            await _db.SaveFinanceItemAsync(item);
             ClearFields(null, null);
-            LoadFinanceItems();
+            await LoadFinanceItemsAsync();
         }
 
         private void ShowInnerView(ContentView view)

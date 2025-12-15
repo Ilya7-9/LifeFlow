@@ -10,13 +10,9 @@ namespace Mauixui.Views
     public partial class CategoriesView : ContentView
     {
         private List<CategoryItem> _categories = new();
-        private CategoryDatabase _db;
         private string _profileId;
         private CategoryItem _selectedCategory;
-
-        private readonly BudgetDatabase _budgetDb;
-        private readonly FinanceDatabase _financeDb;
-        private readonly CategoryDatabase _categoryDb;
+        private MainDatabase _db;
 
         private List<BudgetItem> _budgets = new();
         private List<FinanceItem> _transactions = new();
@@ -27,11 +23,7 @@ namespace Mauixui.Views
 
             var ps = new ProfileService();
             _profileId = ps.GetCurrentProfile().Id;
-            _db = ps.GetCategoryDatabase(_profileId);
-
-            _budgetDb = ps.GetBudgetDatabase(_profileId);
-            _financeDb = ps.GetFinanceDatabase(_profileId);
-            _categoryDb = ps.GetCategoryDatabase(_profileId);
+            _db =  MainDatabase.Instance;
 
             _ = LoadDataAsync();
         }
@@ -50,8 +42,8 @@ namespace Mauixui.Views
 
         private async Task LoadBudgetsAndTransactionsAsync()
         {
-            _budgets = await _budgetDb.GetBudgetsAsync(_profileId);
-            _transactions = await _financeDb.GetItemsAsync(_profileId);
+            _budgets = await _db.GetBudgetsAsync(_profileId);
+            _transactions = await _db.GetItemsAsync(_profileId);
 
             // Автоматический пересчёт потраченной суммы для бюджетов
             foreach (var budget in _budgets)
@@ -61,7 +53,7 @@ namespace Mauixui.Views
                     .Sum(t => t.Amount);
 
                 // Обновляем бюджет в базе
-                await _budgetDb.SaveBudgetAsync(budget);
+                await _db.SaveBudgetAsync(budget);
             }
         }
 
@@ -277,7 +269,7 @@ namespace Mauixui.Views
             if (existingBudget != null && oldName != _selectedCategory.Name)
             {
                 existingBudget.Category = _selectedCategory.Name;
-                await _budgetDb.SaveBudgetAsync(existingBudget);
+                await _db.SaveBudgetAsync(existingBudget);
             }
 
             ClearForm();
@@ -295,7 +287,7 @@ namespace Mauixui.Views
                 // Обновляем существующий бюджет
                 existingBudget.Limit = amount;
                 existingBudget.ResetDate = DateTime.Now.AddMonths(1);
-                await _budgetDb.SaveBudgetAsync(existingBudget);
+                await _db.SaveBudgetAsync(existingBudget);
             }
             else
             {
@@ -309,7 +301,7 @@ namespace Mauixui.Views
                     CreatedAt = DateTime.Now,
                     ResetDate = DateTime.Now.AddMonths(1)
                 };
-                await _budgetDb.SaveBudgetAsync(budgetItem);
+                await _db.SaveBudgetAsync(budgetItem);
             }
         }
 
@@ -328,7 +320,7 @@ namespace Mauixui.Views
                 var relatedBudget = _budgets.FirstOrDefault(b => b.Category == _selectedCategory.Name);
                 if (relatedBudget != null)
                 {
-                    await _budgetDb.DeleteBudgetAsync(relatedBudget);
+                    await _db.DeleteBudgetAsync(relatedBudget);
                 }
 
                 await _db.DeleteCategoryAsync(_selectedCategory);

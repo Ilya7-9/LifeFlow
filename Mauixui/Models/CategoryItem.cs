@@ -1,16 +1,16 @@
 using SQLite;
 
-namespace Mauixui.Models
+[Table("Categories")]
+public class CategoryItem
 {
-    [Table("CategoryItem")]
-    public class CategoryItem
-    {
-        [PrimaryKey, AutoIncrement]
-        public int Id { get; set; }
-        public string ProfileId { get; set; }
-        public bool IsSelected { get; set; }
-        public string Name { get; set; } // название категории
-        public string Type { get; set; } // Доход / Расход
-        public string Budget { get; set; }
-    }
+    [PrimaryKey, AutoIncrement]
+    public int Id { get; set; }
+
+    [Indexed]
+    public string ProfileId { get; set; }
+
+    public bool IsSelected { get; set; }
+    public string Name { get; set; }
+    public string Type { get; set; } // Доход / Расход
+    public string Budget { get; set; }
 }

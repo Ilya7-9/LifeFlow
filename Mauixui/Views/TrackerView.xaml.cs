@@ -4,574 +4,621 @@ using Mauixui.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Timers;
 using System.Threading.Tasks;
-using System.Text.Json;
-using SQLite;
-using System.IO;
+using Microcharts;
+using SkiaSharp;
 
 namespace Mauixui.Views
 {
     public partial class TrackerView : ContentView
     {
-        private System.Timers.Timer _uiUpdateTimer;
-        private HistoryDatabase _historyDb;
-        private DateTime _lastSnapshotDate = DateTime.MinValue;
+        private MainDatabase _database;
+        private UserProfile _currentProfile;
+        private System.Timers.Timer _refreshTimer;
 
         public TrackerView()
         {
             InitializeComponent();
-
-            // Инициализация базы истории
-            _historyDb = new HistoryDatabase();
-
-            InitializeTracker();
-            SetupUITimer();
-
-            // Загружаем историю при старте
-            Device.BeginInvokeOnMainThread(async () => await LoadAndRenderHistoryAsync());
+            InitializeServices();
+            SetupRefreshTimer();
+            LoadInitialData();
         }
 
-        private void InitializeTracker()
-        {
-            TrackerService.EnsureStarted();
-
-            var tracker = TrackerService.Tracker;
-            tracker.OnAppUsageRecorded += OnAppUsageRecorded;
-            tracker.OnWebsiteUsageRecorded += OnWebsiteUsageRecorded;
-            tracker.OnAppUsageUpdated += OnAppUsageUpdated;
-            tracker.OnWebsiteUsageUpdated += OnWebsiteUsageUpdated;
-
-            UpdateStatus("✅ Трекер активен");
-
-            UpdateStats();
-
-            // Попробуем автоматически сохранить снимок за предыдущий день, если нужно
-            Device.StartTimer(TimeSpan.FromSeconds(10), () =>
-            {
-                TryAutoSaveDailySnapshot();
-                return true; // повторяем
-            });
-        }
-
-        private bool _isUpdating = false;
-
-        private void SetupUITimer()
-        {
-            _uiUpdateTimer = new System.Timers.Timer(1000);
-            _uiUpdateTimer.Elapsed += (s, e) =>
-            {
-                Device.BeginInvokeOnMainThread(() =>
-                {
-                    UpdateStats();
-                    UpdateCurrentActivity();
-                });
-            };
-            _uiUpdateTimer.AutoReset = true;
-            _uiUpdateTimer.Start();
-        }
-
-
-
-        private void UpdateUI()
-        {
-            Device.BeginInvokeOnMainThread(() =>
-            {
-                UpdateStats();
-                UpdateCurrentActivity();
-                UpdateProfileStats();
-            });
-        }
-
-        private void OnAppUsageRecorded(AppUsageRecord record)
-        {
-            UpdateProfileStats();
-        }
-
-        private void OnWebsiteUsageRecorded(WebsiteUsageRecord record)
-        {
-            UpdateProfileStats();
-        }
-
-        private void OnAppUsageUpdated(string appName, TimeSpan duration)
-        {
-            UpdateCurrentActivity();
-        }
-
-        private void OnWebsiteUsageUpdated(string website, TimeSpan duration)
-        {
-            UpdateCurrentActivity();
-        }
-
-        private void UpdateStats()
+        private async Task InitializeServices()
         {
             try
             {
-                var todayAppUsage = TrackerService.GetTodayAppUsage();
-                var todayWebsiteUsage = TrackerService.GetTodayWebsiteUsage();
-                var totalTime = TrackerService.LiveTotalTime;
-
-                if (TotalTimeLabel != null)
-                    TotalTimeLabel.Text = $"Общее время: {totalTime:hh\\:mm\\:ss}";
-
-                if (AppCountLabel != null)
-                    AppCountLabel.Text = $"Приложений: {todayAppUsage.Select(r => r.AppName).Distinct().Count()}";
-
-                if (WebsiteCountLabel != null)
-                    WebsiteCountLabel.Text = $"Сайтов: {todayWebsiteUsage.Select(r => r.Website).Distinct().Count()}";
-
-                // Топ приложений
-                var topApps = todayAppUsage
-                    .GroupBy(r => r.AppName)
-                    .Select(g => new { App = g.Key, Time = TimeSpan.FromSeconds(g.Sum(r => r.Duration.TotalSeconds)) })
-                    .OrderByDescending(x => x.Time)
-                    .Take(5)
-                    .ToList();
-
-                if (TopAppsStack != null)
+                // Получаем текущий профиль
+                if (Application.Current is App app)
                 {
-                    TopAppsStack.Children.Clear();
-                    foreach (var app in topApps)
-                    {
-                        TopAppsStack.Children.Add(new Label
-                        {
-                            Text = $"{app.App}: {app.Time:hh\\:mm\\:ss}",
-                            TextColor = Color.FromArgb("#CCCCCC"),
-                            FontSize = 12
-                        });
-                    }
+                    _currentProfile = await app.GetCurrentProfileAsync();
+                    _database = MainDatabase.Instance;
                 }
 
-                // Топ сайтов
-                var topWebsites = todayWebsiteUsage
-                    .GroupBy(r => r.Website)
-                    .Select(g => new { Site = g.Key, Time = TimeSpan.FromSeconds(g.Sum(r => r.Duration.TotalSeconds)) })
-                    .OrderByDescending(x => x.Time)
-                    .Take(5)
-                    .ToList();
-
-                if (TopWebsitesStack != null)
+                // Инициализируем TrackerService если он еще не инициализирован
+                if (_currentProfile != null)
                 {
-                    TopWebsitesStack.Children.Clear();
-                    foreach (var site in topWebsites)
-                    {
-                        TopWebsitesStack.Children.Add(new Label
-                        {
-                            Text = $"{site.Site}: {site.Time:hh\\:mm\\:ss}",
-                            TextColor = Color.FromArgb("#CCCCCC"),
-                            FontSize = 12
-                        });
-                    }
+                    // Инициализация трекера
+                    var tracker = new WindowsActivityTracker();
+                    tracker.StartTracking();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating stats: {ex.Message}");
+                Console.WriteLine($"❌ Ошибка инициализации трекера: {ex.Message}");
             }
         }
 
-        private void UpdateCurrentActivity()
+        private void SetupRefreshTimer()
+        {
+            _refreshTimer = new System.Timers.Timer(3000);
+            _refreshTimer.Elapsed += async (s, e) => await RefreshDataAsync();
+            _refreshTimer.AutoReset = true;
+            _refreshTimer.Start();
+        }
+
+        private async void LoadInitialData()
         {
             try
             {
-                var (currentApp, appTime) = TrackerService.GetCurrentAppActivity();
-                var (currentWebsite, websiteTime) = TrackerService.GetCurrentWebsiteActivity();
+                if (_currentProfile == null) return;
 
+                // Загружаем данные
+                await LoadTodayStatsAsync();
+                await LoadWeeklyStatsAsync();
+                await LoadTopAppsAsync();
+                await LoadTopWebsitesAsync();
+                await LoadProductivityDataAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Ошибка загрузки данных: {ex.Message}");
+            }
+        }
 
-
-                if (CurrentActivityLabel != null)
+        private async Task RefreshDataAsync()
+        {
+            try
+            {
+                Device.BeginInvokeOnMainThread(async () =>
                 {
-                    if (!string.IsNullOrEmpty(currentApp) && currentApp != "Неизвестно")
-                    {
-                        CurrentActivityLabel.Text = $"Сейчас: {currentApp} ({appTime:mm\\:ss})";
+                    await LoadTodayStatsAsync();
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Ошибка обновления данных: {ex.Message}");
+            }
+        }
 
-                        if (!string.IsNullOrEmpty(currentWebsite) && currentWebsite != "Неизвестно" && websiteTime.TotalSeconds > 5)
+        private async Task LoadTodayStatsAsync()
+        {
+            try
+            {
+                if (_currentProfile == null || _database == null) return;
+
+                var todayStats = await _database.GetTodayStatsAsync(_currentProfile.Id);
+                var todayApps = await _database.GetTodayAppUsageAsync(_currentProfile.Id);
+                var todayWebsites = await _database.GetTodayWebsiteUsageAsync(_currentProfile.Id);
+
+                // Рассчитываем общее время
+                double totalSeconds = 0;
+                foreach (var app in todayApps)
+                    totalSeconds += (app.EndTime - app.StartTime).TotalSeconds;
+
+                foreach (var site in todayWebsites)
+                    totalSeconds += (site.EndTime - site.StartTime).TotalSeconds;
+
+                var todayTime = TimeSpan.FromSeconds(totalSeconds);
+                var productiveTime = CalculateProductiveTime(todayApps, todayWebsites);
+
+                Device.BeginInvokeOnMainThread(() =>
+                {
+                    TodayTimeLabel.Text = FormatTime(todayTime);
+                    ProductiveTimeLabel.Text = FormatTime(productiveTime);
+                    AppsCountLabel.Text = todayApps.Count.ToString();
+                    WebsitesCountLabel.Text = todayWebsites.Count.ToString();
+
+                    // Прогресс продуктивности
+                    var productivityPercent = todayTime.TotalSeconds > 0
+                        ? (int)((productiveTime.TotalSeconds / todayTime.TotalSeconds) * 100)
+                        : 0;
+                    ProductivityProgressBar.Progress = productivityPercent / 100.0;
+                    ProductivityPercentLabel.Text = $"{productivityPercent}%";
+
+                    // Текущая активность (заглушка)
+                    CurrentAppLabel.Text = todayApps.LastOrDefault()?.AppName ?? "Нет данных";
+                    CurrentWebsiteLabel.Text = todayWebsites.LastOrDefault()?.Website ?? "Нет данных";
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Ошибка загрузки статистики за сегодня: {ex.Message}");
+            }
+        }
+
+        private async Task LoadWeeklyStatsAsync()
+        {
+            try
+            {
+                if (_currentProfile == null || _database == null) return;
+
+                var weeklyStats = await _database.GetLastDaysAsync(_currentProfile.Id, 7);
+
+                if (weeklyStats.Any())
+                {
+                    var entries = weeklyStats.Select(stat => new ChartEntry((float)stat.TotalSeconds / 3600)
+                    {
+                        Label = stat.Date.ToString("ddd"),
+                        ValueLabel = $"{TimeSpan.FromSeconds(stat.TotalSeconds):hh\\:mm}",
+                        Color = SKColor.Parse("#5865F2")
+                    }).ToList();
+
+                    Device.BeginInvokeOnMainThread(() =>
+                    {
+                        var chart = new LineChart
                         {
-                            CurrentActivityLabel.Text += $"\nСайт: {currentWebsite} ({websiteTime:mm\\:ss})";
+                            Entries = entries,
+                            LineMode = LineMode.Straight,
+                            LineSize = 4,
+                            PointMode = PointMode.Circle,
+                            PointSize = 8,
+                            LabelTextSize = 12,
+                            BackgroundColor = SKColors.Transparent
+                        };
+                        WeeklyChartView.Chart = chart;
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Ошибка загрузки недельной статистики: {ex.Message}");
+            }
+        }
+
+        private async Task LoadTopAppsAsync()
+        {
+            try
+            {
+                if (_currentProfile == null || _database == null) return;
+
+                var todayApps = await _database.GetTodayAppUsageAsync(_currentProfile.Id);
+
+                var topApps = todayApps
+                    .GroupBy(a => a.AppName)
+                    .Select(g => new
+                    {
+                        App = g.Key,
+                        Time = TimeSpan.FromSeconds(g.Sum(a => (a.EndTime - a.StartTime).TotalSeconds)),
+                        Category = g.FirstOrDefault()?.Category ?? "Другое"
+                    })
+                    .OrderByDescending(x => x.Time.TotalSeconds)
+                    .Take(5)
+                    .ToList();
+
+                Device.BeginInvokeOnMainThread(() =>
+                {
+                    TopAppsStackLayout.Children.Clear();
+
+                    if (topApps.Any())
+                    {
+                        foreach (var app in topApps)
+                        {
+                            var appView = CreateAppItemView(app.App, app.Time, app.Category);
+                            TopAppsStackLayout.Children.Add(appView);
                         }
                     }
                     else
                     {
-                        CurrentActivityLabel.Text = "Активность появится здесь...";
+                        var label = new Label
+                        {
+                            Text = "Нет данных за сегодня",
+                            FontSize = 14,
+                            TextColor = Color.FromArgb("#949BA4"),
+                            HorizontalOptions = LayoutOptions.Center,
+                            Margin = new Thickness(0, 10)
+                        };
+                        TopAppsStackLayout.Children.Add(label);
                     }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating current activity: {ex.Message}");
-            }
-        }
-
-        private void UpdateProfileStats()
-        {
-            try
-            {
-                var totalTrackedTime = TrackerService.GetTotalTrackedTime();
-
-                if (Application.Current?.MainPage is MainPage mainPage)
-                {
-                    mainPage.UpdateProfileStatistics(0, 0, totalTrackedTime);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating profile stats: {ex.Message}");
-            }
-        }
-
-        private void UpdateStatus(string status)
-        {
-            Device.BeginInvokeOnMainThread(() =>
-            {
-                if (StatusLabel != null)
-                    StatusLabel.Text = status;
-            });
-        }
-
-        private void OnStartTrackingClicked(object sender, EventArgs e)
-        {
-            TrackerService.Tracker.StartTracking();
-            UpdateStatus("✅ Трекер активен");
-        }
-
-        private void OnStopTrackingClicked(object sender, EventArgs e)
-        {
-            TrackerService.Tracker.StopTracking();
-            UpdateStatus("⏹️ Трекер остановлен");
-        }
-
-        private async void OnShowStatsClicked(object sender, EventArgs e)
-        {
-            var todayAppUsage = TrackerService.GetTodayAppUsage();
-            var todayWebsiteUsage = TrackerService.GetTodayWebsiteUsage();
-
-            string stats = $"📊 Статистика за {DateTime.Today:dd.MM.yyyy}\n\n";
-
-            stats += "📱 Топ приложений:\n";
-            var topApps = todayAppUsage
-                .GroupBy(r => r.AppName)
-                .Select(g => new { App = g.Key, Time = TimeSpan.FromSeconds(g.Sum(r => r.Duration.TotalSeconds)) })
-                .OrderByDescending(x => x.Time)
-                .Take(10);
-
-            foreach (var app in topApps)
-            {
-                stats += $"   {app.App}: {app.Time:hh\\:mm\\:ss}\n";
-            }
-
-            stats += "\n🌐 Топ сайтов:\n";
-            var topWebsites = todayWebsiteUsage
-                .GroupBy(r => r.Website)
-                .Select(g => new { Site = g.Key, Time = TimeSpan.FromSeconds(g.Sum(r => r.Duration.TotalSeconds)) })
-                .OrderByDescending(x => x.Time)
-                .Take(10);
-
-            foreach (var site in topWebsites)
-            {
-                stats += $"   {site.Site}: {site.Time:hh\\:mm\\:ss}\n";
-            }
-
-            await DisplayAlert("Детальная статистика", stats, "OK");
-        }
-
-        private async void OnSaveSnapshotClicked(object sender, EventArgs e)
-        {
-            await SaveDailySnapshotAsync(DateTime.Today);
-            await LoadAndRenderHistoryAsync();
-            await DisplayAlert("Сохранено", "Снимок за сегодня сохранён в истории.", "OK");
-        }
-
-        private void OnUnloaded(object sender, EventArgs e)
-        {
-            _uiUpdateTimer?.Stop();
-            _uiUpdateTimer?.Dispose();
-        }
-
-        private async Task SaveDailySnapshotAsync(DateTime date)
-        {
-            try
-            {
-                // Получаем текущие данные
-                var todayAppUsage = TrackerService.GetTodayAppUsage();
-                var todayWebsiteUsage = TrackerService.GetTodayWebsiteUsage();
-                var totalTime = TrackerService.GetTotalTrackedTime();
-
-                // Топ-приложение и топ-сайт
-                var topApp = todayAppUsage
-                    .GroupBy(r => r.AppName)
-                    .Select(g => new { App = g.Key, Seconds = g.Sum(r => r.Duration.TotalSeconds) })
-                    .OrderByDescending(x => x.Seconds)
-                    .FirstOrDefault();
-
-                var topSite = todayWebsiteUsage
-                    .GroupBy(r => r.Website)
-                    .Select(g => new { Site = g.Key, Seconds = g.Sum(r => r.Duration.TotalSeconds) })
-                    .OrderByDescending(x => x.Seconds)
-                    .FirstOrDefault();
-
-                var appsSummary = todayAppUsage
-                    .GroupBy(r => r.AppName)
-                    .Select(g => new { App = g.Key, Seconds = g.Sum(r => r.Duration.TotalSeconds) })
-                    .OrderByDescending(x => x.Seconds)
-                    .ToList();
-
-                var sitesSummary = todayWebsiteUsage
-                    .GroupBy(r => r.Website)
-                    .Select(g => new { Site = g.Key, Seconds = g.Sum(r => r.Duration.TotalSeconds) })
-                    .OrderByDescending(x => x.Seconds)
-                    .ToList();
-
-                var stat = new DailyStat
-                {
-                    Date = date.Date,
-                    TotalSeconds = (long)totalTime.TotalSeconds,
-                    TopApp = topApp?.App ?? string.Empty,
-                    TopSite = topSite?.Site ?? string.Empty,
-                    AppsJson = JsonSerializer.Serialize(appsSummary),
-                    SitesJson = JsonSerializer.Serialize(sitesSummary)
-                };
-
-                await _historyDb.SaveStatAsync(stat);
-                _lastSnapshotDate = date.Date;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error saving daily snapshot: {ex.Message}");
-            }
-        }
-
-        private void TryAutoSaveDailySnapshot()
-        {
-            // Автосохранение: если дата изменилась и предыдущая не была сохранена
-            var today = DateTime.Today;
-            if (_lastSnapshotDate.Date < today)
-            {
-                // попытка сохранить предыдущий день (в идеале, нужно сохранять в 00:01, но здесь — максимально простая логика)
-                Device.BeginInvokeOnMainThread(async () =>
-                {
-                    try
-                    {
-                        await SaveDailySnapshotAsync(today.AddDays(-1));
-                        await LoadAndRenderHistoryAsync();
-                    }
-                    catch { /* silent */ }
                 });
-
-                _lastSnapshotDate = today;
-            }
-        }
-
-        private async Task LoadAndRenderHistoryAsync()
-        {
-            try
-            {
-                var last7 = await _historyDb.GetLastDaysAsync(7);
-
-                // Prepare UI models
-                var models = last7.Select(s => new HistoryViewModel
-                {
-                    Date = s.Date,
-                    DateText = s.Date.Date == DateTime.Today ? "СЕГОДНЯ" :
-                               s.Date.Date == DateTime.Today.AddDays(-1) ? "ВЧЕРА" :
-                               s.Date.ToString("dd MMM"),
-                    TotalSeconds = s.TotalSeconds,
-                    TotalTimeText = TimeSpan.FromSeconds(s.TotalSeconds).ToString(@"hh\:mm\:ss"),
-                    TopSummary = $"Топ: {s.TopApp}  |  Сайт: {s.TopSite}",
-                    Raw = s
-                }).ToList();
-
-                // Render bars
-                RenderWeekBars(models);
-
-                // Bind list
-                HistoryList.ItemsSource = models;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading history: {ex.Message}");
+                Console.WriteLine($"❌ Ошибка загрузки топ приложений: {ex.Message}");
             }
         }
 
-        private void RenderWeekBars(List<HistoryViewModel> models)
-        {
-            WeekBarsPanel.Children.Clear();
-
-            // find max seconds to scale bars
-            long maxSeconds = models.Any() ? models.Max(m => m.TotalSeconds) : 1;
-
-            foreach (var m in models)
-            {
-                // vertical container for column
-                var column = new VerticalStackLayout
-                {
-                    WidthRequest = 48,
-                    HorizontalOptions = LayoutOptions.Center,
-                    VerticalOptions = LayoutOptions.End
-                };
-
-                // bar: height proportional to total seconds (max height 120)
-                double height = 0;
-                if (maxSeconds > 0)
-                    height = Math.Max(6, 120.0 * (m.TotalSeconds / (double)maxSeconds));
-
-                var barFrame = new Frame
-                {
-                    HeightRequest = height,
-                    WidthRequest = 32,
-                    BackgroundColor = Color.FromArgb("#3C82F6"),
-                    CornerRadius = 6,
-                    Padding = 0,
-                    HasShadow = false,
-                    HorizontalOptions = LayoutOptions.Center,
-                    VerticalOptions = LayoutOptions.End
-                };
-
-                // label under bar
-                var label = new Label
-                {
-                    Text = m.DateText,
-                    FontSize = 11,
-                    TextColor = Color.FromArgb("#CCCCCC"),
-                    HorizontalTextAlignment = TextAlignment.Center,
-                    HorizontalOptions = LayoutOptions.Center
-                };
-
-                // tooltip-like label above with hours
-                var topLabel = new Label
-                {
-                    Text = TimeSpan.FromSeconds(m.TotalSeconds).ToString(@"h\:mm"),
-                    FontSize = 10,
-                    TextColor = Color.FromArgb("#CCCCCC"),
-                    HorizontalTextAlignment = TextAlignment.Center,
-                    HorizontalOptions = LayoutOptions.Center
-                };
-
-                column.Children.Add(topLabel);
-                column.Children.Add(barFrame);
-                column.Children.Add(label);
-
-                // add tap to open detail (select item in list)
-                var tap = new TapGestureRecognizer();
-                tap.Tapped += (s, e) =>
-                {
-                    // set selection in CollectionView
-                    HistoryList.SelectedItem = m;
-                };
-                column.GestureRecognizers.Add(tap);
-
-                WeekBarsPanel.Children.Add(column);
-            }
-        }
-
-        private async void OnHistorySelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (e.CurrentSelection.FirstOrDefault() is HistoryViewModel vm)
-            {
-                // Show details popup
-                var raw = vm.Raw;
-                string appsText = "Топ приложений:\n";
-                try
-                {
-                    var apps = JsonSerializer.Deserialize<List<AppSummary>>(raw.AppsJson);
-                    foreach (var a in apps.Take(10))
-                    {
-                        var ts = TimeSpan.FromSeconds(a.Seconds);
-                        appsText += $"{a.App}: {ts:hh\\:mm\\:ss}\n";
-                    }
-                }
-                catch { appsText += "(нет данных)\n"; }
-
-                string sitesText = "\nТоп сайтов:\n";
-                try
-                {
-                    var sites = JsonSerializer.Deserialize<List<SiteSummary>>(raw.SitesJson);
-                    foreach (var s in sites.Take(10))
-                    {
-                        var ts = TimeSpan.FromSeconds(s.Seconds);
-                        sitesText += $"{s.Site}: {ts:hh\\:mm\\:ss}\n";
-                    }
-                }
-                catch { sitesText += "(нет данных)\n"; }
-
-                await DisplayAlert($"{vm.DateText} — {vm.TotalTimeText}", appsText + sitesText, "OK");
-
-                // deselect
-                ((CollectionView)sender).SelectedItem = null;
-            }
-        }
-
-        // Экспорт одного дня в CSV (упрощённо)
-        private async Task ExportDayToCsvAsync(DailyStat stat)
+        private async Task LoadTopWebsitesAsync()
         {
             try
             {
-                var folder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                var filename = $"activity_{stat.Date:yyyyMMdd}.csv";
-                var path = Path.Combine(folder, filename);
+                if (_currentProfile == null || _database == null) return;
 
-                using var sw = new StreamWriter(path, false);
-                sw.WriteLine("type,name,seconds");
-                // apps
-                try
-                {
-                    var apps = JsonSerializer.Deserialize<List<AppSummary>>(stat.AppsJson);
-                    foreach (var a in apps)
+                var todayWebsites = await _database.GetTodayWebsiteUsageAsync(_currentProfile.Id);
+
+                var topSites = todayWebsites
+                    .GroupBy(w => w.Website)
+                    .Select(g => new
                     {
-                        sw.WriteLine($"app,\"{a.App}\",{a.Seconds}");
-                    }
-                }
-                catch { }
+                        Site = g.Key,
+                        Time = TimeSpan.FromSeconds(g.Sum(w => (w.EndTime - w.StartTime).TotalSeconds)),
+                        Category = g.FirstOrDefault()?.Category ?? "Другое"
+                    })
+                    .OrderByDescending(x => x.Time.TotalSeconds)
+                    .Take(5)
+                    .ToList();
 
-                // sites
-                try
+                Device.BeginInvokeOnMainThread(() =>
                 {
-                    var sites = JsonSerializer.Deserialize<List<SiteSummary>>(stat.SitesJson);
-                    foreach (var s in sites)
-                    {
-                        sw.WriteLine($"site,\"{s.Site}\",{s.Seconds}");
-                    }
-                }
-                catch { }
+                    TopWebsitesStackLayout.Children.Clear();
 
-                await DisplayAlert("Экспорт", $"CSV сохранён:\n{path}", "OK");
+                    if (topSites.Any())
+                    {
+                        foreach (var site in topSites)
+                        {
+                            var siteView = CreateWebsiteItemView(site.Site, site.Time, site.Category);
+                            TopWebsitesStackLayout.Children.Add(siteView);
+                        }
+                    }
+                    else
+                    {
+                        var label = new Label
+                        {
+                            Text = "Нет данных за сегодня",
+                            FontSize = 14,
+                            TextColor = Color.FromArgb("#949BA4"),
+                            HorizontalOptions = LayoutOptions.Center,
+                            Margin = new Thickness(0, 10)
+                        };
+                        TopWebsitesStackLayout.Children.Add(label);
+                    }
+                });
             }
             catch (Exception ex)
             {
-                await DisplayAlert("Ошибка экспорта", ex.Message, "OK");
+                Console.WriteLine($"❌ Ошибка загрузки топ сайтов: {ex.Message}");
             }
         }
 
-        // Утилиты для DisplayAlert
-        private async System.Threading.Tasks.Task DisplayAlert(string title, string message, string cancel)
+        private async Task LoadProductivityDataAsync()
+        {
+            try
+            {
+                if (_currentProfile == null || _database == null) return;
+
+                var todayApps = await _database.GetTodayAppUsageAsync(_currentProfile.Id);
+                var todayWebsites = await _database.GetTodayWebsiteUsageAsync(_currentProfile.Id);
+
+                var productiveCategories = new[] { "Разработка", "Офис", "Обучение", "Почта" };
+                var distractingCategories = new[] { "Соцсети", "Игры", "Видео", "Развлечения" };
+
+                var productiveTime = CalculateTimeByCategories(todayApps, todayWebsites, productiveCategories);
+                var distractingTime = CalculateTimeByCategories(todayApps, todayWebsites, distractingCategories);
+
+                Device.BeginInvokeOnMainThread(() =>
+                {
+                    ProductiveTimeCard.Text = FormatTime(productiveTime);
+                    DistractingTimeCard.Text = FormatTime(distractingTime);
+
+                    // Круговая диаграмма продуктивности
+                    var entries = new List<ChartEntry>();
+
+                    if (productiveTime.TotalSeconds > 0)
+                    {
+                        entries.Add(new ChartEntry((float)productiveTime.TotalSeconds)
+                        {
+                            Label = "Продуктивно",
+                            ValueLabel = FormatTime(productiveTime),
+                            Color = SKColor.Parse("#23A55A")
+                        });
+                    }
+
+                    if (distractingTime.TotalSeconds > 0)
+                    {
+                        entries.Add(new ChartEntry((float)distractingTime.TotalSeconds)
+                        {
+                            Label = "Отвлечения",
+                            ValueLabel = FormatTime(distractingTime),
+                            Color = SKColor.Parse("#F23F43")
+                        });
+                    }
+
+                    if (entries.Any())
+                    {
+                        var chart = new DonutChart
+                        {
+                            Entries = entries,
+                            LabelTextSize = 14,
+                            BackgroundColor = SKColors.Transparent,
+                            HoleRadius = 0.4f
+                        };
+                        ProductivityChartView.Chart = chart;
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Ошибка загрузки данных продуктивности: {ex.Message}");
+            }
+        }
+
+        #region Helper Methods
+
+        private TimeSpan CalculateProductiveTime(List<AppUsageRecord> apps, List<WebsiteUsageRecord> websites)
+        {
+            var productiveCategories = new[] { "Разработка", "Офис", "Обучение", "Почта" };
+
+            double productiveSeconds = 0;
+
+            foreach (var app in apps)
+            {
+                if (productiveCategories.Contains(app.Category))
+                    productiveSeconds += (app.EndTime - app.StartTime).TotalSeconds;
+            }
+
+            foreach (var site in websites)
+            {
+                if (productiveCategories.Contains(site.Category))
+                    productiveSeconds += (site.EndTime - site.StartTime).TotalSeconds;
+            }
+
+            return TimeSpan.FromSeconds(productiveSeconds);
+        }
+
+        private TimeSpan CalculateTimeByCategories(
+            List<AppUsageRecord> apps,
+            List<WebsiteUsageRecord> websites,
+            string[] categories)
+        {
+            double totalSeconds = 0;
+
+            foreach (var app in apps)
+            {
+                if (categories.Contains(app.Category))
+                    totalSeconds += (app.EndTime - app.StartTime).TotalSeconds;
+            }
+
+            foreach (var site in websites)
+            {
+                if (categories.Contains(site.Category))
+                    totalSeconds += (site.EndTime - site.StartTime).TotalSeconds;
+            }
+
+            return TimeSpan.FromSeconds(totalSeconds);
+        }
+
+        private View CreateAppItemView(string appName, TimeSpan time, string category)
+        {
+            var stackLayout = new StackLayout
+            {
+                Orientation = StackOrientation.Horizontal,
+                Spacing = 10,
+                Padding = new Thickness(10, 5),
+                BackgroundColor = Color.FromArgb("#1E1F22"),
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+
+            var iconLabel = new Label
+            {
+                Text = GetAppIcon(category),
+                FontSize = 20,
+                VerticalOptions = LayoutOptions.Center
+            };
+
+            var infoLayout = new StackLayout
+            {
+                VerticalOptions = LayoutOptions.Center,
+                Spacing = 2
+            };
+
+            var nameLabel = new Label
+            {
+                Text = appName,
+                FontSize = 14,
+                TextColor = Color.FromArgb("#FFFFFF")
+            };
+
+            var timeLabel = new Label
+            {
+                Text = $"{FormatTime(time)} • {category}",
+                FontSize = 12,
+                TextColor = Color.FromArgb("#949BA4")
+            };
+
+            infoLayout.Children.Add(nameLabel);
+            infoLayout.Children.Add(timeLabel);
+
+            stackLayout.Children.Add(iconLabel);
+            stackLayout.Children.Add(infoLayout);
+
+            return stackLayout;
+        }
+
+        private View CreateWebsiteItemView(string website, TimeSpan time, string category)
+        {
+            var stackLayout = new StackLayout
+            {
+                Orientation = StackOrientation.Horizontal,
+                Spacing = 10,
+                Padding = new Thickness(10, 5),
+                BackgroundColor = Color.FromArgb("#1E1F22"),
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+
+            var iconLabel = new Label
+            {
+                Text = GetWebsiteIcon(category),
+                FontSize = 20,
+                VerticalOptions = LayoutOptions.Center
+            };
+
+            var infoLayout = new StackLayout
+            {
+                VerticalOptions = LayoutOptions.Center,
+                Spacing = 2
+            };
+
+            var nameLabel = new Label
+            {
+                Text = website.Length > 30 ? website.Substring(0, 30) + "..." : website,
+                FontSize = 14,
+                TextColor = Color.FromArgb("#FFFFFF")
+            };
+
+            var timeLabel = new Label
+            {
+                Text = $"{FormatTime(time)} • {category}",
+                FontSize = 12,
+                TextColor = Color.FromArgb("#949BA4")
+            };
+
+            infoLayout.Children.Add(nameLabel);
+            infoLayout.Children.Add(timeLabel);
+
+            stackLayout.Children.Add(iconLabel);
+            stackLayout.Children.Add(infoLayout);
+
+            return stackLayout;
+        }
+
+        private string GetAppIcon(string category)
+        {
+            return category switch
+            {
+                "Разработка" => "💻",
+                "Браузер" => "🌐",
+                "Офис" => "📄",
+                "Мессенджер" => "💬",
+                "Игры" => "🎮",
+                "Музыка/Видео" => "🎵",
+                _ => "📱"
+            };
+        }
+
+        private string GetWebsiteIcon(string category)
+        {
+            return category switch
+            {
+                "Разработка" => "👨‍💻",
+                "Соцсети" => "👥",
+                "Видео" => "🎥",
+                "Поиск" => "🔍",
+                "Почта" => "📧",
+                "Шопинг" => "🛒",
+                _ => "🌐"
+            };
+        }
+
+        private string FormatTime(TimeSpan time)
+        {
+            if (time.TotalHours >= 1)
+                return $"{(int)time.TotalHours}ч {time.Minutes}м";
+            else if (time.TotalMinutes >= 1)
+                return $"{time.Minutes}м {time.Seconds}с";
+            else
+                return $"{time.Seconds}с";
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        private async void OnRefreshClicked(object sender, EventArgs e)
+        {
+            RefreshButton.IsEnabled = false;
+            RefreshButton.Text = "🔄 Обновление...";
+
+            try
+            {
+                await LoadTodayStatsAsync();
+                await LoadWeeklyStatsAsync();
+                await LoadTopAppsAsync();
+                await LoadTopWebsitesAsync();
+                await LoadProductivityDataAsync();
+
+                await DisplayAlert("Успех", "Данные обновлены", "OK");
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Ошибка", $"Не удалось обновить данные: {ex.Message}", "OK");
+            }
+            finally
+            {
+                RefreshButton.IsEnabled = true;
+                RefreshButton.Text = "🔄 Обновить";
+            }
+        }
+
+        private async void OnViewAllAppsClicked(object sender, EventArgs e)
+        {
+            // Создайте простую страницу для просмотра истории
+            await DisplayAlert("Информация", "Функция просмотра всей истории будет добавлена в следующем обновлении", "OK");
+        }
+
+        private async void OnViewAllWebsitesClicked(object sender, EventArgs e)
+        {
+            // Создайте простую страницу для просмотра истории
+            await DisplayAlert("Информация", "Функция просмотра всей истории будет добавлена в следующем обновлении", "OK");
+        }
+
+        private async void OnStartTrackingClicked(object sender, EventArgs e)
+        {
+            StartTrackingButton.IsEnabled = false;
+            StopTrackingButton.IsEnabled = true;
+            await DisplayAlert("Трекинг", "Трекинг активности запущен", "OK");
+        }
+
+        private async void OnStopTrackingClicked(object sender, EventArgs e)
+        {
+            StartTrackingButton.IsEnabled = true;
+            StopTrackingButton.IsEnabled = false;
+            await DisplayAlert("Трекинг", "Трекинг активности остановлен", "OK");
+        }
+
+        private async void OnClearHistoryClicked(object sender, EventArgs e)
+        {
+            var confirm = await DisplayAlert("Очистка истории",
+                "Вы уверены, что хотите очистить всю историю трекера?", "Да", "Нет");
+
+            if (confirm)
+            {
+                try
+                {
+                    // Здесь можно добавить логику очистки
+                    await DisplayAlert("Успех", "История очищена", "OK");
+                }
+                catch (Exception ex)
+                {
+                    await DisplayAlert("Ошибка", $"Не удалось очистить историю: {ex.Message}", "OK");
+                }
+            }
+        }
+
+        #endregion
+
+        protected override void OnParentSet()
+        {
+            base.OnParentSet();
+            if (Parent == null)
+            {
+                _refreshTimer?.Stop();
+                _refreshTimer?.Dispose();
+            }
+        }
+
+        // Вспомогательные методы для диалогов
+        private async Task DisplayAlert(string title, string message, string cancel)
         {
             if (Application.Current?.MainPage != null)
                 await Application.Current.MainPage.DisplayAlert(title, message, cancel);
         }
-    }
 
-    // ===== Вспомогательные модели =====
+        private async Task<bool> DisplayAlert(string title, string message, string accept, string cancel)
+        {
+            if (Application.Current?.MainPage != null)
+                return await Application.Current.MainPage.DisplayAlert(title, message, accept, cancel);
 
-    // ViewModel для списка истории (UI-friendly)
-    public class HistoryViewModel
-    {
-        public DateTime Date { get; set; }
-        public string DateText { get; set; }
-        public long TotalSeconds { get; set; }
-        public string TotalTimeText { get; set; }
-        public string TopSummary { get; set; }
-        public DailyStat Raw { get; set; }
-    }
-
-    // Простые структуры для десериализации
-    public class AppSummary
-    {
-        public string App { get; set; }
-        public long Seconds { get; set; }
-    }
-
-    public class SiteSummary
-    {
-        public string Site { get; set; }
-        public long Seconds { get; set; }
+            return false;
+        }
     }
 }

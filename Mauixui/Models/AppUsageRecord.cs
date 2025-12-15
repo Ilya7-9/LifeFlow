@@ -1,30 +1,27 @@
-﻿using System;
+﻿using SQLite;
 
-namespace Mauixui.Models
+[Table("AppUsageRecords")]
+public class AppUsageRecord
 {
-    public class AppUsageRecord
-    {
-        public int Id { get; set; }
-        public string AppName { get; set; }
-        public string WindowTitle { get; set; }
-        public string ProcessName { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public TimeSpan Duration => EndTime - StartTime;
-        public string Category { get; set; }
-    }
+    [PrimaryKey]
+    public string Id { get; set; }
 
-    public class WebsiteUsageRecord
-    {
-        public int Id { get; set; }
-        public string Website { get; set; }
-        public string Url { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public TimeSpan Duration => EndTime - StartTime;
-        public string Category { get; set; }
-    }
+    [Indexed] // Добавляем индекс для ускорения запросов
+    public string ProfileId { get; set; }
 
+    public string AppName { get; set; }
+    public string WindowTitle { get; set; }
+    public string ProcessName { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public string Category { get; set; }
+
+    [Ignore]
+    public TimeSpan Duration => EndTime - StartTime;
+}
+
+namespace Models
+{
     public class ActiveWindowInfo
     {
         public string WindowTitle { get; set; }

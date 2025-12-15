@@ -1,136 +1,59 @@
-﻿using System;
+﻿using SQLite;
+using Mauixui.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Mauixui.Models;
-using Microsoft.Maui.Storage;
 
 namespace Mauixui.Services
 {
     public class AuthService
     {
-        private readonly ProfileService _profileService;
-        private readonly CredentialsService _credentialsService;
+        private readonly MainDatabase _database;
 
+        public bool IsLoggedIn()
+        {
+            try
+            {
+                var profileId = Preferences.Get("current_profile_id", "");
+                return !string.IsNullOrEmpty(profileId);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public AuthService()
+        {
+            _database = MainDatabase.Instance;
+        }
+
+        // Конструктор с параметром для совместимости
         public AuthService(ProfileService profileService)
         {
-            _profileService = profileService;
-            _credentialsService = new CredentialsService();
+            _database = MainDatabase.Instance;
         }
 
-        // СТАРЫЕ СИНХРОННЫЕ МЕТОДЫ ДЛЯ СОВМЕСТИМОСТИ
-        public (bool success, string message, UserProfile profile) Login(string email, string password)
+        public async Task<(bool success, string message, UserProfile profile)> LoginAsync(
+            string email, string password)
         {
             try
             {
-                // Простой синхронный вызов асинхронного метода
-                var task = LoginAsync(email, password);
-                task.Wait(); // Блокируем выполнение
-                return task.Result;
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Ошибка входа: {ex.Message}", null);
-            }
-        }
-
-        public (bool success, string message) Register(string email, string password, string name, string avatar = "👤")
-        {
-            try
-            {
-                var task = RegisterAsync(email, password, name, avatar);
-                task.Wait();
-                return task.Result;
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Ошибка регистрации: {ex.Message}");
-            }
-        }
-
-        public (bool success, string message) ChangePassword(string email, string currentPassword, string newPassword)
-        {
-            try
-            {
-                var task = ChangePasswordAsync(email, currentPassword, newPassword);
-                task.Wait();
-                return task.Result;
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Ошибка смены пароля: {ex.Message}");
-            }
-        }
-
-        // НОВЫЕ АСИНХРОННЫЕ МЕТОДЫ
-        public async Task<(bool success, string message)> RegisterAsync(string email, string password, string name, string avatar = "👤")
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(email) || !email.Contains("@"))
-                    return (false, "Некорректный email");
-
-                if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
-                    return (false, "Пароль должен содержать минимум 6 символов");
-
-                if (string.IsNullOrWhiteSpace(name))
-                    return (false, "Имя не может быть пустым");
-
-                // Проверяем существование email
-                var existingCredentials = await _credentialsService.GetCredentialsByEmailAsync(email);
-                if (existingCredentials != null)
-                    return (false, "Пользователь с таким email уже существует");
-
-                // Создаем профиль
-                var profile = new UserProfile
-                {
-                    Name = name.Trim(),
-                    Avatar = avatar,
-                    CreatedAt = DateTime.Now,
-                    LastLogin = DateTime.Now,
-                    IsActive = true
-                };
-
-                _profileService.AddProfile(profile);
-
-                // Сохраняем учетные данные С EMAIL
-                var success = await _credentialsService.SaveCredentialsAsync(profile.Id, email, password);
-                if (!success)
-                    return (false, "Ошибка сохранения учетных данных");
-
-                _profileService.SetCurrentProfile(profile);
-                return (true, "Регистрация успешна");
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Ошибка регистрации: {ex.Message}");
-            }
-        }
-
-        public async Task<(bool success, string message, UserProfile profile)> LoginAsync(string email, string password)
-        {
-            try
-            {
-                // Ищем учетные данные по email
-                var credentials = await _credentialsService.GetCredentialsByEmailAsync(email);
-                if (credentials == null)
-                    return (false, "Пользователь не найден", null);
-
-                // Проверяем пароль
-                if (credentials.PasswordHash != password)
-                    return (false, "Неверный пароль", null);
-
-                // Находим профиль
-                var profile = _profileService.GetProfiles()
-                    .FirstOrDefault(p => p.Id == credentials.ProfileId && p.IsActive);
+                var profile = await _database.GetProfileByEmailAsync(email);
 
                 if (profile == null)
-                    return (false, "Профиль не найден", null);
+                    return (false, "Пользователь не найден", null);
 
-                // Обновляем время входа
+                if (!profile.IsActive)
+                    return (false, "Профиль деактивирован", null);
+
+                if (profile.Password != password)
+                    return (false, "Неверный пароль", null);
+
+                // Обновляем время последнего входа
                 profile.LastLogin = DateTime.Now;
-                _profileService.UpdateProfile(profile);
-                _profileService.SetCurrentProfile(profile);
+                await _database.UpdateProfileAsync(profile);
 
                 return (true, "Вход успешен", profile);
             }
@@ -140,25 +63,65 @@ namespace Mauixui.Services
             }
         }
 
-        public async Task<(bool success, string message)> ChangePasswordAsync(string email, string currentPassword, string newPassword)
+        public async Task<(bool success, string message, UserProfile profile)> RegisterAsync(
+            string email, string password, string name, string avatar = "👤")
         {
             try
             {
-                var loginResult = await LoginAsync(email, currentPassword);
-                if (!loginResult.success)
-                    return (false, loginResult.message);
+                if (string.IsNullOrWhiteSpace(email) || !email.Contains("@"))
+                    return (false, "Некорректный email", null);
 
-                if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
-                    return (false, "Новый пароль должен содержать минимум 6 символов");
+                if (string.IsNullOrWhiteSpace(password))
+                    return (false, "Пароль не может быть пустым", null);
 
-                var credentials = await _credentialsService.GetCredentialsByEmailAsync(email);
-                if (credentials == null)
-                    return (false, "Учетные данные не найдены");
+                if (string.IsNullOrWhiteSpace(name))
+                    return (false, "Имя не может быть пустым", null);
 
-                var success = await _credentialsService.UpdatePasswordAsync(credentials.ProfileId, newPassword);
-                return success ?
-                    (true, "Пароль успешно изменен") :
-                    (false, "Ошибка изменения пароля");
+                // Проверяем уникальность email
+                if (await _database.CheckEmailExistsAsync(email))
+                    return (false, "Пользователь с таким email уже существует", null);
+
+                var profile = await _database.CreateProfileAsync(name, email, password, avatar);
+                return (true, "Регистрация успешна", profile);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Ошибка регистрации: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool success, string message)> ChangePasswordAsync(
+            string email, string currentPassword, string newPassword)
+        {
+            var loginResult = await LoginAsync(email, currentPassword);
+            if (!loginResult.success)
+                return (false, loginResult.message);
+
+            if (string.IsNullOrWhiteSpace(newPassword))
+                return (false, "Новый пароль не может быть пустым");
+
+            loginResult.profile.Password = newPassword;
+            await _database.UpdateProfileAsync(loginResult.profile);
+
+            return (true, "Пароль успешно изменен");
+        }
+
+        public async Task<(bool success, string message)> ChangePasswordByProfileIdAsync(
+            string profileId, string newPassword)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(newPassword))
+                    return (false, "Новый пароль не может быть пустым");
+
+                var profile = await _database.GetProfileAsync(profileId);
+                if (profile == null)
+                    return (false, "Профиль не найден");
+
+                profile.Password = newPassword;
+                await _database.UpdateProfileAsync(profile);
+
+                return (true, "Пароль успешно изменен");
             }
             catch (Exception ex)
             {
@@ -166,28 +129,35 @@ namespace Mauixui.Services
             }
         }
 
-        public async Task<(bool success, string message)> ChangePasswordByProfileIdAsync(string profileId, string newPassword)
+        // Синхронные версии для совместимости
+        public (bool success, string message, UserProfile profile) Login(
+            string email, string password)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
-                    return (false, "Новый пароль должен содержать минимум 6 символов");
-
-                var success = await _credentialsService.UpdatePasswordAsync(profileId, newPassword);
-                return success ?
-                    (true, "Пароль успешно изменен") :
-                    (false, "Ошибка изменения пароля");
+                var task = LoginAsync(email, password);
+                task.Wait();
+                return task.Result;
             }
             catch (Exception ex)
             {
-                return (false, $"Ошибка смены пароля: {ex.Message}");
+                return (false, $"Ошибка входа: {ex.Message}", null);
             }
         }
 
-        public bool IsLoggedIn()
+        public (bool success, string message, UserProfile profile) Register(
+            string email, string password, string name, string avatar = "👤")
         {
-            var currentProfile = _profileService.GetCurrentProfile();
-            return currentProfile != null;
+            try
+            {
+                var task = RegisterAsync(email, password, name, avatar);
+                task.Wait();
+                return task.Result;
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Ошибка регистрации: {ex.Message}", null);
+            }
         }
 
         public void Logout()
@@ -195,14 +165,5 @@ namespace Mauixui.Services
             Preferences.Remove("current_profile_id");
         }
 
-        // Получить email текущего пользователя
-        public async Task<string> GetCurrentUserEmailAsync()
-        {
-            var currentProfile = _profileService.GetCurrentProfile();
-            if (currentProfile == null) return null;
-
-            var credentials = await _credentialsService.GetCredentialsAsync(currentProfile.Id);
-            return credentials?.Email;
-        }
     }
 }

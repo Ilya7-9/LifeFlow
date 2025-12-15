@@ -6,7 +6,7 @@
              BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1E1E1E}">
 
     <ScrollView>
-        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto"
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
               RowSpacing="20"
               Padding="20"
               VerticalOptions="Center">
@@ -44,7 +44,8 @@
             </Frame>
 
             <!-- Кнопка входа -->
-            <Button Grid.Row="2"
+            <Button x:Name="LoginButton"
+                    Grid.Row="2"
                     Text="🔑 Войти"
                     BackgroundColor="#5865F2"
                     TextColor="White"
@@ -102,16 +103,6 @@
                     FontSize="16"
                     FontAttributes="Bold"
                     Clicked="OnCreateNewProfileClicked"/>
-
-            <!-- Кнопка отладки (можно удалить после тестирования) -->
-            <!--<Button Grid.Row="5"
-                    Text="🐞 Отладка Credentials"
-                    BackgroundColor="Orange"
-                    TextColor="White"
-                    CornerRadius="10"
-                    HeightRequest="40"
-                    FontSize="12"
-                    Clicked="OnDebugCredentialsClicked"/> -->
 
         </Grid>
     </ScrollView>

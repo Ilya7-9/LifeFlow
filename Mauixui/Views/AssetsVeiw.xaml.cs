@@ -11,12 +11,11 @@ namespace Mauixui.Views
 {
     public partial class AssetsView : ContentView
     {
-        private AssetDatabase _assetDb;
-        private DebtDatabase _debtDb;
         private string _profileId;
 
         private List<AssetItem> _assets = new();
         private List<DebtItem> _debts = new();
+        private MainDatabase _db;
 
         public AssetsView()
         {
@@ -24,8 +23,7 @@ namespace Mauixui.Views
 
             var ps = new ProfileService();
             _profileId = ps.GetCurrentProfile().Id;
-            _assetDb = ps.GetAssetDatabase(_profileId);
-            _debtDb = ps.GetDebtDatabase(_profileId);
+            _db = MainDatabase.Instance;
 
             // По умолчанию — актив
             TypePicker.SelectedIndexChanged += (s, e) =>
@@ -60,13 +58,13 @@ namespace Mauixui.Views
 
         private async Task LoadAssetsAsync()
         {
-            _assets = await _assetDb.GetAssetsAsync(_profileId);
+            _assets = await _db.GetAssetsAsync(_profileId);
             RenderAssets();
         }
 
         private async Task LoadDebtsAsync()
         {
-            _debts = await _debtDb.GetDebtsAsync(_profileId);
+            _debts = await _db.GetDebtsAsync(_profileId);
             RenderDebts();
         }
 
@@ -137,7 +135,7 @@ namespace Mauixui.Views
                     Notes = NotesEntry.Text ?? ""
                 };
 
-                await _assetDb.SaveAssetAsync(asset);
+                await _db.SaveAssetAsync(asset);
                 await LoadAssetsAsync();
             }
             else if (TypePicker.SelectedItem.ToString() == "Долг")
@@ -165,7 +163,7 @@ namespace Mauixui.Views
                     Notes = NotesEntry.Text ?? ""
                 };
 
-                await _debtDb.SaveDebtAsync(debt);
+                await _db.SaveDebtAsync(debt);
                 await LoadDebtsAsync();
             }
             else
@@ -185,7 +183,7 @@ namespace Mauixui.Views
                     Notes = NotesEntry.Text ?? ""
                 };
 
-                await _debtDb.SaveDebtAsync(debt);
+                await _db.SaveDebtAsync(debt);
                 await LoadDebtsAsync();
             }
 
@@ -208,7 +206,7 @@ namespace Mauixui.Views
             asset.Name = newName;
             asset.Value = newVal;
 
-            await _assetDb.SaveAssetAsync(asset);
+            await _db.SaveAssetAsync(asset);
             await LoadAssetsAsync();
             RecalculateTotals();
         }
@@ -220,7 +218,7 @@ namespace Mauixui.Views
             bool ok = await Application.Current.MainPage.DisplayAlert("Удалить", $"Удалить актив '{asset.Name}'?", "Да", "Нет");
             if (!ok) return;
 
-            await _assetDb.DeleteAssetAsync(asset);
+            await _db.DeleteAssetAsync(asset);
             await LoadAssetsAsync();
             RecalculateTotals();
         }
@@ -239,7 +237,7 @@ namespace Mauixui.Views
             debt.Party = newParty;
             debt.Amount = newAmt;
 
-            await _debtDb.SaveDebtAsync(debt);
+            await _db.SaveDebtAsync(debt);
             await LoadDebtsAsync();
             RecalculateTotals();
         }
@@ -251,7 +249,7 @@ namespace Mauixui.Views
             bool ok = await Application.Current.MainPage.DisplayAlert("Удалить", $"Удалить долг '{debt.Party}'?", "Да", "Нет");
             if (!ok) return;
 
-            await _debtDb.DeleteDebtAsync(debt);
+            await _db.DeleteDebtAsync(debt);
             await LoadDebtsAsync();
             RecalculateTotals();
         }
